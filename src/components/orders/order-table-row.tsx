@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Order, OrderStatus, OrderPriority } from "@/lib/domain";
+import { OrderStatus, OrderPriority } from "@/lib/domain";
+import type { Order as PrismaOrder } from "@prisma/client";
+
+type OrderWithRelations = PrismaOrder & {
+  customer: { firstName: string; lastName: string; mobile: string };
+  service: { name: string; category: { name: string } };
+  assignee: { firstName: string; lastName: string } | null;
+};
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = {
   NEW: { label: "جدید", icon: CircleHelp, className: "text-yellow-600 bg-yellow-100" },
@@ -48,8 +55,10 @@ function formatCurrency(amount: number | null | undefined) {
   return new Intl.NumberFormat("fa-IR").format(amount) + " تومان";
 }
 
-export function OrderTableRow({ order }: { order: Order & { customer: { name: string; phone: string }; service: { name: string; category: { name: string } }; assignee: { name: string } | null } }) {
+export function OrderTableRow({ order }: { order: OrderWithRelations }) {
   const isOverdue = order.expectedAt && new Date(order.expectedAt) < new Date() && !["DELIVERED", "CANCELLED"].includes(order.status);
+  const customerName = `${order.customer.firstName} ${order.customer.lastName}`;
+  const assigneeName = order.assignee ? `${order.assignee.firstName} ${order.assignee.lastName}` : null;
 
   return (
     <tr className={cn("border-b border-border hover:bg-surface-hover transition-colors", isOverdue && "bg-red-50/30")}>
@@ -60,8 +69,8 @@ export function OrderTableRow({ order }: { order: Order & { customer: { name: st
       </td>
       <td className="px-4 py-3 text-right">
         <div>
-          <p className="font-medium">{order.customer.name}</p>
-          <p className="text-xs text-text-dim">{order.customer.phone}</p>
+          <p className="font-medium">{customerName}</p>
+          <p className="text-xs text-text-dim">{order.customer.mobile}</p>
         </div>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -71,28 +80,28 @@ export function OrderTableRow({ order }: { order: Order & { customer: { name: st
         </div>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        {order.assignee ? (
+        {assigneeName ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs font-medium text-accent">
-            {order.assignee.name}
+            {assigneeName}
           </span>
         ) : (
           <span className="text-text-dim">—</span>
         )}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap font-medium tabular-nums">
-        {formatCurrency(order.totalPrice)}
+        {formatCurrency(order.totalAmount)}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <span className={cn("font-medium", isOverdue && "text-red-600")}>
           {formatDate(order.expectedAt)}
-          {isOverdue && <AlertTriangle className="inline h-3.5 w-3.5 text-red-500" title="معوق" />}
+          {isOverdue && <span title="معوق"><AlertTriangle className="inline h-3.5 w-3.5 text-red-500" aria-label="معوق" /></span>}
         </span>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status as OrderStatus} />
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <PriorityBadge priority={order.priority} />
+        <PriorityBadge priority={order.priority as OrderPriority} />
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <Link

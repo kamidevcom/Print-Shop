@@ -5,6 +5,7 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrdersFilterBar } from "@/components/orders/orders-filter-bar";
 import { OrderTableRow } from "@/components/orders/order-table-row";
+import { ACTIVE_STATUSES } from "@/lib/order-state";
 
 export default async function OrdersPage({
   searchParams,

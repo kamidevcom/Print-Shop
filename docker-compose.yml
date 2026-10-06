@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: chap-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chap
+      POSTGRES_PASSWORD: chap
+      POSTGRES_DB: chap
+    ports:
+      - "5432:5432"
+    volumes:
+      - chap_pg_data:/var/lib/postgresql/data
+
+volumes:
+  chap_pg_data:

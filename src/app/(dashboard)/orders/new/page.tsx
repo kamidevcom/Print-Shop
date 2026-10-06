@@ -1,0 +1,57 @@
+import { prisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/ui/page";
+import { Card, CardContent } from "@/components/ui/card";
+import { NewOrderForm } from "@/components/orders/new-order-form";
+
+function getDefaultCustomerId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("chap-default-customer-id");
+}
+
+export default async function NewOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ customerId?: string }>;
+}) {
+  const { customerId } = await searchParams;
+  const [customers, services, employees] = await Promise.all([
+    prisma.customer.findMany({
+      where: { isActive: true },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      select: { id: true, firstName: true, lastName: true, mobile: true },
+    }),
+    prisma.service.findMany({
+      where: { isActive: true },
+      include: { category: true },
+      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+    }),
+    prisma.employee.findMany({
+      where: { isActive: true },
+      orderBy: { firstName: "asc" },
+      select: { id: true, firstName: true, lastName: true, isDefaultAssignee: true },
+    }),
+  ]);
+
+  // Use URL param customerId, or default customer from localStorage
+  const effectiveDefaultCustomerId = customerId || getDefaultCustomerId() || undefined;
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <PageHeader title="سفارش سریع" description="ثبت سفارش جدید برای مشتری چاپخانه" />
+      <Card>
+        <CardContent>
+          <NewOrderForm
+            customers={customers}
+            services={services.map((s) => ({
+              id: s.id,
+              name: s.name,
+              categoryName: s.category.name,
+            }))}
+            employees={employees}
+            defaultCustomerId={effectiveDefaultCustomerId}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

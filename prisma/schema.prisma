@@ -1,0 +1,171 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  name         String
+  username     String          @unique
+  passwordHash String
+  role         String          @default("STAFF")
+  isActive     Boolean         @default(true)
+  employee     Employee?
+  activities   OrderActivity[]
+  payments     OrderPayment[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  mobile    String
+  type      String   @default("NORMAL")
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([mobile])
+  @@index([lastName, firstName])
+  @@index([type])
+}
+
+model Employee {
+  id                 String   @id @default(cuid())
+  firstName          String
+  lastName           String
+  phone              String?
+  title              String?
+  notes              String?
+  isActive           Boolean  @default(true)
+  isDefaultAssignee  Boolean  @default(false)
+  startedAt          DateTime @default(now())
+  userId             String?  @unique
+  user               User?    @relation(fields: [userId], references: [id])
+  orders             Order[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model ServiceCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  services  Service[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Service {
+  id         String          @id @default(cuid())
+  name       String
+  categoryId String
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
+  basePrice  Int?
+  isActive   Boolean         @default(true)
+  orders     Order[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([categoryId, name])
+  @@index([categoryId])
+}
+
+model Order {
+  id            String               @id @default(cuid())
+  orderNumber   Int                  @unique
+  customerId    String
+  customer      Customer             @relation(fields: [customerId], references: [id])
+  serviceId     String
+  service       Service              @relation(fields: [serviceId], references: [id])
+  assigneeId    String?
+  assignee      Employee?            @relation(fields: [assigneeId], references: [id])
+  description   String?
+  internalNote  String?
+  status        String               @default("NEW")
+  priority      String               @default("NORMAL")
+  totalAmount   Int                  @default(0)
+  discount      Int                  @default(0)
+  expectedAt    DateTime?
+  deliveredAt   DateTime?
+  files         OrderFile[]
+  payments      OrderPayment[]
+  activities    OrderActivity[]
+  statusHistory OrderStatusHistory[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  @@index([status])
+  @@index([customerId])
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@index([expectedAt])
+}
+
+model OrderFile {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fileName   String
+  storedName String
+  mimeType   String?
+  size       Int?
+  version    Int      @default(1)
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model OrderPayment {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount    Int
+  method    String   @default("CASH")
+  notes     String?
+  createdBy String?
+  user      User?    @relation(fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model OrderActivity {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  message   String
+  meta      String?
+  createdBy String?
+  user      User?    @relation(fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model OrderStatusHistory {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  createdAt  DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+model OrderCounter {
+  id    String @id @default("default")
+  value Int    @default(1000)
+}

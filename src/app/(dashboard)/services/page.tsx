@@ -14,6 +14,8 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function ServicesPage() {
   const categories = await prisma.serviceCategory.findMany({
     orderBy: { sortOrder: "asc" },

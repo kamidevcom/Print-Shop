@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,11 +14,11 @@ model User {
   passwordHash String
   role         String          @default("STAFF")
   isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
   employee     Employee?
   activities   OrderActivity[]
   payments     OrderPayment[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
 }
 
 model Customer {
@@ -30,9 +30,9 @@ model Customer {
   address   String?
   notes     String?
   isActive  Boolean  @default(true)
-  orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orders    Order[]
 
   @@index([mobile])
   @@index([lastName, firstName])
@@ -40,20 +40,20 @@ model Customer {
 }
 
 model Employee {
-  id                 String   @id @default(cuid())
-  firstName          String
-  lastName           String
-  phone              String?
-  title              String?
-  notes              String?
-  isActive           Boolean  @default(true)
-  isDefaultAssignee  Boolean  @default(false)
-  startedAt          DateTime @default(now())
-  userId             String?  @unique
-  user               User?    @relation(fields: [userId], references: [id])
-  orders             Order[]
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id                String   @id @default(cuid())
+  firstName         String
+  lastName          String
+  phone             String?
+  title             String?
+  notes             String?
+  isActive          Boolean  @default(true)
+  isDefaultAssignee Boolean  @default(false)
+  startedAt         DateTime @default(now())
+  userId            String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User?    @relation(fields: [userId], references: [id])
+  orders            Order[]
 }
 
 model ServiceCategory {
@@ -61,21 +61,21 @@ model ServiceCategory {
   name      String    @unique
   sortOrder Int       @default(0)
   isActive  Boolean   @default(true)
-  services  Service[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  services  Service[]
 }
 
 model Service {
   id         String          @id @default(cuid())
   name       String
   categoryId String
-  category   ServiceCategory @relation(fields: [categoryId], references: [id])
   basePrice  Int?
   isActive   Boolean         @default(true)
-  orders     Order[]
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
+  orders     Order[]
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
 
   @@unique([categoryId, name])
   @@index([categoryId])
@@ -85,11 +85,8 @@ model Order {
   id            String               @id @default(cuid())
   orderNumber   Int                  @unique
   customerId    String
-  customer      Customer             @relation(fields: [customerId], references: [id])
   serviceId     String
-  service       Service              @relation(fields: [serviceId], references: [id])
   assigneeId    String?
-  assignee      Employee?            @relation(fields: [assigneeId], references: [id])
   description   String?
   internalNote  String?
   status        String               @default("NEW")
@@ -98,12 +95,15 @@ model Order {
   discount      Int                  @default(0)
   expectedAt    DateTime?
   deliveredAt   DateTime?
-  files         OrderFile[]
-  payments      OrderPayment[]
-  activities    OrderActivity[]
-  statusHistory OrderStatusHistory[]
   createdAt     DateTime             @default(now())
   updatedAt     DateTime             @updatedAt
+  assignee      Employee?            @relation(fields: [assigneeId], references: [id])
+  customer      Customer             @relation(fields: [customerId], references: [id])
+  service       Service              @relation(fields: [serviceId], references: [id])
+  activities    OrderActivity[]
+  files         OrderFile[]
+  payments      OrderPayment[]
+  statusHistory OrderStatusHistory[]
 
   @@index([status])
   @@index([customerId])
@@ -115,7 +115,6 @@ model Order {
 model OrderFile {
   id         String   @id @default(cuid())
   orderId    String
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   fileName   String
   storedName String
   mimeType   String?
@@ -123,6 +122,7 @@ model OrderFile {
   version    Int      @default(1)
   notes      String?
   createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }
@@ -130,13 +130,13 @@ model OrderFile {
 model OrderPayment {
   id        String   @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount    Int
   method    String   @default("CASH")
   notes     String?
   createdBy String?
-  user      User?    @relation(fields: [createdBy], references: [id])
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [createdBy], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId])
 }
@@ -144,12 +144,12 @@ model OrderPayment {
 model OrderActivity {
   id        String   @id @default(cuid())
   orderId   String
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   message   String
   meta      String?
   createdBy String?
-  user      User?    @relation(fields: [createdBy], references: [id])
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [createdBy], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
 }
@@ -157,10 +157,10 @@ model OrderActivity {
 model OrderStatusHistory {
   id         String   @id @default(cuid())
   orderId    String
-  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   fromStatus String?
   toStatus   String
   createdAt  DateTime @default(now())
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
 }

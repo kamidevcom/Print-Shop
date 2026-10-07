@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CustomerTableRow } from "@/components/customers/customer-table-row";
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomersPage({
   searchParams,
 }: {

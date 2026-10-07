@@ -14,6 +14,8 @@ import { PAYMENT_METHOD_LABELS, statusLabel } from "@/lib/order-state";
 import { paidFromPayments } from "@/lib/queries/customers";
 import { OrderDeleteModal } from "@/components/orders/order-delete-modal";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrderDetailPage({
   params,
 }: {

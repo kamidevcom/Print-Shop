@@ -7,6 +7,8 @@ import { OrdersFilterBar } from "@/components/orders/orders-filter-bar";
 import { OrderTableRow } from "@/components/orders/order-table-row";
 import { ACTIVE_STATUSES } from "@/lib/order-state";
 
+export const dynamic = "force-dynamic";
+
 export default async function OrdersPage({
   searchParams,
 }: {

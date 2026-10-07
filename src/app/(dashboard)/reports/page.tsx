@@ -9,6 +9,8 @@ import { formatMoney, fullName, remainingAmount, formatNumber } from "@/lib/util
 import { toJalaliDateTime } from "@/lib/jalali";
 import { startOfMonth, endOfMonth } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReportsPage() {
   const now = new Date();
   const monthStart = startOfMonth(now);

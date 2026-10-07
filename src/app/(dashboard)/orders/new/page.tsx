@@ -8,6 +8,8 @@ function getDefaultCustomerId(): string | null {
   return localStorage.getItem("chap-default-customer-id");
 }
 
+export const dynamic = "force-dynamic";
+
 export default async function NewOrderPage({
   searchParams,
 }: {

@@ -17,6 +17,8 @@ import { toJalali, toJalaliDateTime } from "@/lib/jalali";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
 import { CustomerDeleteModal } from "@/components/customers/customer-delete-modal";
 
+export const dynamic = "force-dynamic";
+
 export default async function CustomerDetailPage({
   params,
 }: {

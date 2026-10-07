@@ -9,6 +9,8 @@ import { ACTIVE_STATUSES, IN_PROGRESS_STATUSES } from "@/lib/order-state";
 import { OrderStatus } from "@/lib/domain";
 import { startOfDay, endOfDay } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const now = new Date();
   const dayStart = startOfDay(now);

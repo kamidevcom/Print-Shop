@@ -3,6 +3,8 @@ import { Printer } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">

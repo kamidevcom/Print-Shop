@@ -2,13 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, PrismaTx } from "@/lib/prisma";
 import { CustomerType } from "@/lib/domain";
 
 function parseCustomerType(raw: FormDataEntryValue | null) {
   const value = String(raw || CustomerType.NORMAL);
   if (value === CustomerType.STUDENT || value === CustomerType.BUSINESS) return value;
   return CustomerType.NORMAL;
+}
+
+async function unsetDefaultCustomer(tx: PrismaTx, excludeId?: string) {
+  await tx.customer.updateMany({
+    where: {
+      isDefault: true,
+      ...(excludeId ? { NOT: { id: excludeId } } : {}),
+    },
+    data: { isDefault: false },
+  });
 }
 
 export async function createCustomerAction(formData: FormData) {
@@ -18,16 +28,23 @@ export async function createCustomerAction(formData: FormData) {
   const type = parseCustomerType(formData.get("type"));
   const address = String(formData.get("address") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim() || null;
+  const isDefault = String(formData.get("isDefault") || "") === "true";
 
   if (!firstName || !lastName || !mobile) {
     throw new Error("نام، نام خانوادگی و موبایل الزامی است");
   }
 
-  const customer = await prisma.customer.create({
-    data: { firstName, lastName, mobile, type, address, notes },
+  const customer = await prisma.$transaction(async (tx) => {
+    if (isDefault) {
+      await unsetDefaultCustomer(tx);
+    }
+    return tx.customer.create({
+      data: { firstName, lastName, mobile, type, address, notes, isDefault },
+    });
   });
 
   revalidatePath("/customers");
+  revalidatePath("/orders/new");
   redirect(`/customers/${customer.id}`);
 }
 
@@ -38,13 +55,19 @@ export async function createCustomerQuickAction(formData: FormData) {
   const type = parseCustomerType(formData.get("type"));
   const address = String(formData.get("address") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim() || null;
+  const isDefault = String(formData.get("isDefault") || "") === "true";
 
   if (!firstName || !lastName || !mobile) {
     return { error: "نام، نام خانوادگی و موبایل الزامی است" };
   }
 
-  const customer = await prisma.customer.create({
-    data: { firstName, lastName, mobile, type, address, notes },
+  const customer = await prisma.$transaction(async (tx) => {
+    if (isDefault) {
+      await unsetDefaultCustomer(tx);
+    }
+    return tx.customer.create({
+      data: { firstName, lastName, mobile, type, address, notes, isDefault },
+    });
   });
 
   revalidatePath("/customers");
@@ -69,14 +92,21 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   const address = String(formData.get("address") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim() || null;
   const isActive = String(formData.get("isActive") || "true") === "true";
+  const isDefault = String(formData.get("isDefault") || "") === "true";
 
-  await prisma.customer.update({
-    where: { id },
-    data: { firstName, lastName, mobile, type, address, notes, isActive },
+  await prisma.$transaction(async (tx) => {
+    if (isDefault) {
+      await unsetDefaultCustomer(tx, id);
+    }
+    await tx.customer.update({
+      where: { id },
+      data: { firstName, lastName, mobile, type, address, notes, isActive, isDefault },
+    });
   });
 
   revalidatePath(`/customers/${id}`);
   revalidatePath("/customers");
+  revalidatePath("/orders/new");
 }
 
 export async function createEmployeeAction(formData: FormData) {
@@ -173,8 +203,12 @@ export async function toggleCategoryAction(id: string, isActive: boolean) {
 }
 
 export async function deleteCustomerAction(id: string) {
-  await prisma.customer.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.customer.delete({ where: { id } });
+    // If we deleted the default customer, no action needed - there will be no default
+  });
   revalidatePath("/customers");
+  revalidatePath("/orders/new");
   redirect("/customers");
 }
 
@@ -182,4 +216,33 @@ export async function deleteEmployeeAction(id: string) {
   await prisma.employee.delete({ where: { id } });
   revalidatePath("/employees");
   redirect("/employees");
+}
+
+export async function setDefaultCustomerAction(customerId: string) {
+  await prisma.$transaction(async (tx) => {
+    await unsetDefaultCustomer(tx);
+    await tx.customer.update({
+      where: { id: customerId },
+      data: { isDefault: true },
+    });
+  });
+  revalidatePath("/customers");
+  revalidatePath("/orders/new");
+}
+
+export async function unsetDefaultCustomerAction(customerId: string) {
+  await prisma.customer.update({
+    where: { id: customerId, isDefault: true },
+    data: { isDefault: false },
+  });
+  revalidatePath("/customers");
+  revalidatePath("/orders/new");
+}
+
+export async function getDefaultCustomerAction() {
+  const customer = await prisma.customer.findFirst({
+    where: { isDefault: true, isActive: true },
+    select: { id: true, firstName: true, lastName: true, mobile: true },
+  });
+  return customer;
 }

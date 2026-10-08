@@ -16,6 +16,7 @@ import { formatMoney, fullName, remainingAmount } from "@/lib/utils";
 import { toJalali, toJalaliDateTime } from "@/lib/jalali";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
 import { CustomerDeleteModal } from "@/components/customers/customer-delete-modal";
+import { Star } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,12 @@ export default async function CustomerDetailPage({
             <Badge tone="accent">
               {CUSTOMER_TYPE_LABELS[customer.type as CustomerType] ?? customer.type}
             </Badge>
+            {customer.isDefault && (
+              <Badge tone="accent" className="gap-1">
+                <Star className="h-3 w-3 fill-current" />
+                پیش‌فرض
+              </Badge>
+            )}
             <Link
               href={`/orders/new?customerId=${customer.id}`}
               className="inline-flex h-11 items-center justify-center rounded-xl bg-accent px-4 text-sm font-medium text-[#1a1610] hover:bg-accent-hover"
@@ -105,6 +112,13 @@ export default async function CustomerDetailPage({
                 <Select id="isActive" name="isActive" defaultValue={customer.isActive ? "true" : "false"}>
                   <option value="true">فعال</option>
                   <option value="false">غیرفعال</option>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="isDefault">مشتری پیش‌فرض</Label>
+                <Select id="isDefault" name="isDefault" defaultValue={customer.isDefault ? "true" : "false"}>
+                  <option value="false">خیر</option>
+                  <option value="true">بله</option>
                 </Select>
               </div>
               <div className="sm:col-span-2 flex items-end">

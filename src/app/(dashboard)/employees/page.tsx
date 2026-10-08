@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { fullName } from "@/lib/utils";
 import { toJalali } from "@/lib/jalali";
 import { EmployeeDeleteModal } from "@/components/employees/employee-delete-modal";
+import { Eye } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -39,35 +40,40 @@ export default async function EmployeesPage() {
           <EmptyState title="کارمندی ثبت نشده" className="md:col-span-2 xl:col-span-3" />
         ) : (
           employees.map((emp) => (
-            <div key={emp.id}>
-              <Link href={`/employees/${emp.id}`}>
-                <Card className="h-full transition hover:border-accent/30 cursor-pointer">
-                  <CardContent className="space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-lg font-semibold">{fullName(emp.firstName, emp.lastName)}</h3>
-                        <p className="text-sm text-text-muted">{emp.title || "بدون عنوان"}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col items-end gap-1">
-                          <Badge tone={emp.isActive ? "success" : "default"}>
-                            {emp.isActive ? "فعال" : "غیرفعال"}
-                          </Badge>
-                          {emp.isDefaultAssignee ? <Badge tone="accent">پیش‌فرض</Badge> : null}
-                        </div>
-                        <EmployeeDeleteModal employeeId={emp.id} employeeName={fullName(emp.firstName, emp.lastName)} />
-                      </div>
+            <Card key={emp.id} className="h-full transition hover:border-accent/30">
+              <CardContent className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">{fullName(emp.firstName, emp.lastName)}</h3>
+                    <p className="text-sm text-text-muted">{emp.title || "بدون عنوان"}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge tone={emp.isActive ? "success" : "default"}>
+                        {emp.isActive ? "فعال" : "غیرفعال"}
+                      </Badge>
+                      {emp.isDefaultAssignee ? <Badge tone="accent">پیش‌فرض</Badge> : null}
                     </div>
-                    <p className="text-sm text-text-dim">{emp.phone || "بدون شماره"}</p>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-muted">سفارش‌ها</span>
-                      <span>{emp._count.orders}</span>
-                    </div>
-                    <p className="text-xs text-text-dim">شروع همکاری: {toJalali(emp.startedAt)}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            </div>
+                    <EmployeeDeleteModal employeeId={emp.id} employeeName={fullName(emp.firstName, emp.lastName)} />
+                  </div>
+                </div>
+                <p className="text-sm text-text-dim">{emp.phone || "بدون شماره"}</p>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-muted">سفارش‌ها</span>
+                  <span>{emp._count.orders}</span>
+                </div>
+                <p className="text-xs text-text-dim">شروع همکاری: {toJalali(emp.startedAt)}</p>
+                <div className="pt-2 border-t border-border">
+                  <Link
+                    href={`/employees/${emp.id}`}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-[#1a1610] hover:bg-accent-hover"
+                  >
+                    <Eye className="h-4 w-4" />
+                    جزئیات
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           ))
         )}
       </div>

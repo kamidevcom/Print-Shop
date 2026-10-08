@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useTransition } from "react";
 import { formatMoney, fullName } from "@/lib/utils";
 import { toJalaliDateTime } from "@/lib/jalali";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CircleHelp, Trash2, AlertTriangle } from "lucide-react";
+import { CircleHelp, Star, StarOff } from "lucide-react";
 import { CustomerDeleteModal } from "./customer-delete-modal";
+import { setDefaultCustomerAction, unsetDefaultCustomerAction } from "@/app/actions/entities";
 
 type CustomerRowData = {
   id: string;
@@ -17,12 +19,42 @@ type CustomerRowData = {
   mobile: string;
   type: string;
   isActive: boolean;
+  isDefault: boolean;
   orderCount: number;
   totalPurchase: number;
   debt: number;
   lastOrderAt: Date | string | null;
   lastOrderNumber: number | string | null;
 };
+
+function DefaultCustomerToggle({ customerId, isDefault }: { customerId: string; isDefault: boolean }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleToggle() {
+    startTransition(async () => {
+      if (isDefault) {
+        await unsetDefaultCustomerAction(customerId);
+      } else {
+        await setDefaultCustomerAction(customerId);
+      }
+    });
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={handleToggle}
+      disabled={pending}
+      title={isDefault ? "حذف پیش‌فرض" : "تنظیم به عنوان پیش‌فرض"}
+      className={cn("p-1.5", isDefault && "text-accent")}
+      aria-label={isDefault ? "حذف پیش‌فرض" : "تنظیم به عنوان پیش‌فرض"}
+    >
+      {isDefault ? <Star className="h-4 w-4 fill-current" /> : <StarOff className="h-4 w-4" />}
+    </Button>
+  );
+}
 
 export function CustomerTableRow({ customer }: { customer: CustomerRowData }) {
   const isActive = customer.isActive;
@@ -32,10 +64,15 @@ export function CustomerTableRow({ customer }: { customer: CustomerRowData }) {
   return (
     <tr className="border-b border-border hover:bg-surface-hover transition-colors">
       <td className="px-4 py-3 text-right">
-        <div>
+        <div className="flex items-center gap-2">
           <Link href={`/customers/${customer.id}`} className="font-medium text-accent hover:underline">
             {fullName(customer.firstName, customer.lastName)}
           </Link>
+          {customer.isDefault && (
+            <Badge tone="accent" className="text-xs">
+              پیش‌فرض
+            </Badge>
+          )}
         </div>
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -74,6 +111,7 @@ export function CustomerTableRow({ customer }: { customer: CustomerRowData }) {
           >
             <CircleHelp className="h-4 w-4" />
           </Link>
+          <DefaultCustomerToggle customerId={customer.id} isDefault={customer.isDefault} />
           <CustomerDeleteModal customerId={customer.id} customerName={fullName(customer.firstName, customer.lastName)} />
         </div>
       </td>

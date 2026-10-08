@@ -1,12 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import { getDefaultCustomerAction } from "@/app/actions/entities";
 import { PageHeader } from "@/components/ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { NewOrderForm } from "@/components/orders/new-order-form";
-
-function getDefaultCustomerId(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("chap-default-customer-id");
-}
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +12,7 @@ export default async function NewOrderPage({
   searchParams: Promise<{ customerId?: string }>;
 }) {
   const { customerId } = await searchParams;
-  const [customers, services, employees] = await Promise.all([
+  const [customers, services, employees, defaultCustomer] = await Promise.all([
     prisma.customer.findMany({
       where: { isActive: true },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
@@ -32,10 +28,11 @@ export default async function NewOrderPage({
       orderBy: { firstName: "asc" },
       select: { id: true, firstName: true, lastName: true, isDefaultAssignee: true },
     }),
+    getDefaultCustomerAction(),
   ]);
 
-  // Use URL param customerId, or default customer from localStorage
-  const effectiveDefaultCustomerId = customerId || getDefaultCustomerId() || undefined;
+  // Use URL param customerId, or default customer from database
+  const effectiveDefaultCustomerId = customerId || defaultCustomer?.id;
 
   return (
     <div className="mx-auto max-w-3xl">

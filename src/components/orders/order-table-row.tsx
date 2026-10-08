@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp } from "lucide-
 import { cn } from "@/lib/utils";
 import { OrderStatus, OrderPriority } from "@/lib/domain";
 import type { Order as PrismaOrder } from "@prisma/client";
+import { OrderDeleteModal } from "./order-delete-modal";
 
 type OrderWithRelations = PrismaOrder & {
   customer: { firstName: string; lastName: string; mobile: string };
@@ -104,13 +105,16 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
         <PriorityBadge priority={order.priority as OrderPriority} />
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        <Link
-          href={`/orders/${order.id}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-text-muted transition hover:bg-surface-hover hover:text-text"
-          aria-label="مشاهده سفارش"
-        >
-          <CircleHelp className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center justify-end gap-2">
+          <Link
+            href={`/orders/${order.id}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-text-muted transition hover:bg-surface-hover hover:text-text"
+            aria-label="مشاهده سفارش"
+          >
+            <CircleHelp className="h-4 w-4" />
+          </Link>
+          <OrderDeleteModal orderId={order.id} orderNumber={String(order.orderNumber)} />
+        </div>
       </td>
     </tr>
   );

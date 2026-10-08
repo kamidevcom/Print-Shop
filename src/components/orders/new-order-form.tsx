@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Plus, Star, StarOff } from "lucide-react";
 import { createOrderAction } from "@/app/actions/orders";
+import { setDefaultCustomerAction, unsetDefaultCustomerAction } from "@/app/actions/entities";
 import { FancySelect } from "@/components/ui/fancy-select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { PersianDatePicker } from "@/components/ui/persian-date-picker";
@@ -14,22 +15,6 @@ import {
   type QuickCustomer,
 } from "@/components/customers/customer-quick-create-modal";
 import { fullName } from "@/lib/utils";
-
-const DEFAULT_CUSTOMER_KEY = "chap-default-customer-id";
-
-function getDefaultCustomerId(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(DEFAULT_CUSTOMER_KEY);
-}
-
-function setDefaultCustomerId(customerId: string | null) {
-  if (typeof window === "undefined") return;
-  if (customerId) {
-    localStorage.setItem(DEFAULT_CUSTOMER_KEY, customerId);
-  } else {
-    localStorage.removeItem(DEFAULT_CUSTOMER_KEY);
-  }
-}
 
 function findDefaultServiceId(services: ServiceOption[]): string | null {
   const copyService = services.find(
@@ -59,6 +44,27 @@ function validateForm(formData: FormData): string | null {
   return null;
 }
 
+function DefaultCustomerToggle({
+  isDefault,
+  onToggle,
+}: {
+  isDefault: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={onToggle}
+      title={isDefault ? "حذف پیش‌فرض" : "تنظیم به عنوان پیش‌فرض"}
+      className="shrink-0 p-2"
+    >
+      {isDefault ? <Star className="h-4 w-4 text-accent fill-current" /> : <StarOff className="h-4 w-4" />}
+    </Button>
+  );
+}
+
 export function NewOrderForm({
   customers: initialCustomers,
   services,
@@ -71,20 +77,13 @@ export function NewOrderForm({
   defaultCustomerId?: string;
 }) {
   const [customers, setCustomers] = useState(initialCustomers);
-  const [customerId, setCustomerId] = useState("");
+  const [customerId, setCustomerId] = useState(propDefaultCustomerId || "");
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const defaultAssigneeId =
     employees.find((e) => e.isDefaultAssignee)?.id ?? "";
 
-  // Initialize customerId from props or localStorage
-  useEffect(() => {
-    const initial = propDefaultCustomerId || getDefaultCustomerId() || "";
-    setCustomerId(initial);
-  }, [propDefaultCustomerId]);
-
-  // Sync customerId to localStorage when it changes (if it matches a customer)
   const handleCustomerChange = (value: string) => {
     setCustomerId(value);
   };
@@ -149,12 +148,19 @@ export function NewOrderForm({
     });
   }
 
-  function toggleDefaultCustomer() {
-    const isDefault = customerId === getDefaultCustomerId();
-    setDefaultCustomerId(isDefault ? null : customerId);
+  async function handleToggleDefault() {
+    startTransition(async () => {
+      if (customerId) {
+        if (customerId === propDefaultCustomerId) {
+          await unsetDefaultCustomerAction(customerId);
+        } else {
+          await setDefaultCustomerAction(customerId);
+        }
+      }
+    });
   }
 
-  const isDefaultCustomer = customerId && customerId === getDefaultCustomerId();
+  const isDefaultCustomer = Boolean(customerId && customerId === propDefaultCustomerId);
 
   return (
     <>
@@ -183,20 +189,10 @@ export function NewOrderForm({
               <span className="hidden sm:inline">جدید</span>
             </Button>
             {customerId && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="shrink-0 p-2"
-                onClick={toggleDefaultCustomer}
-                title={isDefaultCustomer ? "حذف پیش‌فرض" : "تنظیم به عنوان پیش‌فرض"}
-              >
-                {isDefaultCustomer ? (
-                  <Star className="h-4 w-4 text-accent fill-current" />
-                ) : (
-                  <StarOff className="h-4 w-4" />
-                )}
-              </Button>
+              <DefaultCustomerToggle
+                isDefault={isDefaultCustomer}
+                onToggle={handleToggleDefault}
+              />
             )}
           </div>
         </div>

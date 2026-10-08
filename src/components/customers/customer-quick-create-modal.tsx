@@ -87,6 +87,13 @@ export function CustomerQuickCreateModal({
           <Label htmlFor="qc-notes">توضیحات</Label>
           <Textarea id="qc-notes" name="notes" />
         </div>
+        <div>
+          <Label htmlFor="qc-isDefault">مشتری پیش‌فرض</Label>
+          <Select id="qc-isDefault" name="isDefault" defaultValue="false">
+            <option value="false">خیر</option>
+            <option value="true">بله</option>
+          </Select>
+        </div>
         {error ? <p className="sm:col-span-2 text-sm text-danger">{error}</p> : null}
         <div className="flex items-center justify-end gap-2 sm:col-span-2">
           <Button type="button" variant="ghost" onClick={onClose}>

@@ -45,6 +45,13 @@ export default function NewCustomerPage() {
               <Label htmlFor="notes">توضیحات</Label>
               <Textarea id="notes" name="notes" />
             </div>
+            <div>
+              <Label htmlFor="isDefault">مشتری پیش‌فرض</Label>
+              <Select id="isDefault" name="isDefault" defaultValue="false">
+                <option value="false">خیر</option>
+                <option value="true">بله</option>
+              </Select>
+            </div>
             <div className="sm:col-span-2">
               <Button type="submit">ذخیره مشتری</Button>
             </div>

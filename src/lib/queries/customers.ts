@@ -61,6 +61,7 @@ export async function listCustomersWithStats(search?: string) {
       address: c.address,
       notes: c.notes,
       isActive: c.isActive,
+      isDefault: c.isDefault,
       createdAt: c.createdAt,
       orderCount,
       totalPurchase,

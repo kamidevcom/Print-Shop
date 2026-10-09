@@ -14,26 +14,37 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/components/layout/logout-button";
+import { Role } from "@/lib/domain";
+interface NavLink {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles?: Role[];
+}
 
-const links = [
+const links: NavLink[] = [
   { href: "/", label: "داشبورد", icon: LayoutDashboard },
   { href: "/orders", label: "سفارش‌ها", icon: ClipboardList },
   { href: "/customers", label: "مشتریان", icon: Users },
-  { href: "/employees", label: "کارمندان", icon: UserCog },
+  { href: "/employees", label: "کارمندان", icon: UserCog, roles: [Role.ADMIN] },
   { href: "/services", label: "خدمات", icon: Layers },
   { href: "/reports", label: "گزارش‌ها", icon: BarChart3 },
 ];
 
 export function Sidebar({
   userName,
+  userRole,
   isOpen,
   onClose,
 }: {
   userName?: string | null;
+  userRole?: string | null;
   isOpen: boolean;
   onClose: () => void;
 }) {
   const pathname = usePathname();
+
+  const filteredLinks = links.filter((link) => !link.roles || (userRole && link.roles.includes(userRole as Role)));
 
   return (
     <>
@@ -73,7 +84,7 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-          {links.map((link) => {
+          {filteredLinks.map((link) => {
             const active =
               link.href === "/"
                 ? pathname === "/"

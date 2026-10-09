@@ -1,11 +1,17 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp, Truck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OrderStatus, OrderPriority } from "@/lib/domain";
 import type { Order as PrismaOrder } from "@prisma/client";
 import { OrderDeleteModal } from "./order-delete-modal";
+import { changeOrderStatusAction } from "@/app/actions/orders";
+import { getAllowedTransitions } from "@/lib/order-state";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
+import { Button } from "@/components/ui/button";
 
 type OrderWithRelations = PrismaOrder & {
   customer: { firstName: string; lastName: string; mobile: string };
@@ -60,6 +66,28 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
   const isOverdue = order.expectedAt && new Date(order.expectedAt) < new Date() && !["DELIVERED", "CANCELLED"].includes(order.status);
   const customerName = `${order.customer.firstName} ${order.customer.lastName}`;
   const assigneeName = order.assignee ? `${order.assignee.firstName} ${order.assignee.lastName}` : null;
+  const [pendingStatus, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+
+  const canDeliver = getAllowedTransitions(order.status as OrderStatus).includes(OrderStatus.DELIVERED);
+
+  async function handleDeliver() {
+    startLoading();
+    startTransition(async () => {
+      try {
+        await changeOrderStatusAction(order.id, OrderStatus.DELIVERED);
+        showToast("success", `سفارش #${order.orderNumber} به عنوان تحویل شده علامت‌گذاری شد.`);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          showToast("error", err.message);
+        }
+        throw err;
+      } finally {
+        stopLoading();
+      }
+    });
+  }
 
   return (
     <tr className={cn("border-b border-border hover:bg-surface-hover transition-colors", isOverdue && "bg-red-50/30")}>
@@ -94,7 +122,7 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         <span className={cn("font-medium", isOverdue && "text-red-600")}>
-          {formatDate(order.expectedAt)}
+          {formatDate(order.createdAt)}
           {isOverdue && <span title="معوق"><AlertTriangle className="inline h-3.5 w-3.5 text-red-500" aria-label="معوق" /></span>}
         </span>
       </td>
@@ -113,6 +141,19 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
           >
             <CircleHelp className="h-4 w-4" />
           </Link>
+          {canDeliver && (
+            <Button
+              type="button"
+              size="sm"
+              variant="primary"
+              disabled={pendingStatus}
+              className="h-8 px-3"
+              onClick={handleDeliver}
+            >
+              <Truck className="h-3.5 w-3.5 mr-1" />
+              تحویل
+            </Button>
+          )}
           <OrderDeleteModal orderId={order.id} orderNumber={String(order.orderNumber)} />
         </div>
       </td>

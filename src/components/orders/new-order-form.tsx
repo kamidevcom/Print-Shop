@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Star, StarOff } from "lucide-react";
 import { createOrderAction } from "@/app/actions/orders";
 import { setDefaultCustomerAction, unsetDefaultCustomerAction } from "@/app/actions/entities";
@@ -10,6 +11,8 @@ import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
 import {
   CustomerQuickCreateModal,
   type QuickCustomer,
@@ -81,6 +84,9 @@ export function NewOrderForm({
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+  const router = useRouter();
   const defaultAssigneeId =
     employees.find((e) => e.isDefaultAssignee)?.id ?? "";
 
@@ -136,26 +142,39 @@ export function NewOrderForm({
       return;
     }
 
+    startLoading();
     startTransition(async () => {
       try {
-        await createOrderAction(formData);
+        const result = await createOrderAction(formData);
+        if (result?.orderId) {
+          showToast("success", `سفارش #${result.orderNumber} با موفقیت ثبت شد.`);
+          router.push("/orders");
+        }
       } catch (err: unknown) {
         if (err instanceof Error && err.message !== "NEXT_REDIRECT") {
           setError(err.message);
+          showToast("error", err.message);
         }
         throw err;
+      } finally {
+        stopLoading();
       }
     });
   }
 
   async function handleToggleDefault() {
+    startLoading();
     startTransition(async () => {
-      if (customerId) {
-        if (customerId === propDefaultCustomerId) {
-          await unsetDefaultCustomerAction(customerId);
-        } else {
-          await setDefaultCustomerAction(customerId);
+      try {
+        if (customerId) {
+          if (customerId === propDefaultCustomerId) {
+            await unsetDefaultCustomerAction(customerId);
+          } else {
+            await setDefaultCustomerAction(customerId);
+          }
         }
+      } finally {
+        stopLoading();
       }
     });
   }

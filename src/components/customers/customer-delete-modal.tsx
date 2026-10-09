@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { deleteCustomerAction } from "@/app/actions/entities";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
 
 interface CustomerDeleteModalProps {
   customerId: string;
@@ -15,17 +18,27 @@ export function CustomerDeleteModal({ customerId, customerName }: CustomerDelete
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+  const router = useRouter();
 
   function handleDelete() {
     setError("");
+    startLoading();
     startTransition(async () => {
       try {
         await deleteCustomerAction(customerId);
+        showToast("success", `مشتری ${customerName} با موفقیت حذف شد.`);
+        router.refresh();
+        setOpen(false);
       } catch (err: unknown) {
         if (err instanceof Error && err.message !== "NEXT_REDIRECT") {
           setError(err.message);
+          showToast("error", err.message);
         }
         throw err;
+      } finally {
+        stopLoading();
       }
     });
   }

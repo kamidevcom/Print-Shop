@@ -7,11 +7,24 @@ import { OrderPriority, OrderStatus, PaymentMethod } from "@/lib/domain";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canTransition, ORDER_STATUS_LABELS } from "@/lib/order-state";
+import { Role } from "@/lib/domain";
 
 async function requireUser() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   return session.user;
+}
+
+async function checkOrderPermission(orderId: string, userId: string, userRole: string): Promise<void> {
+  if (userRole === Role.ADMIN) return;
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { createdByUserId: true },
+  });
+  if (!order) throw new Error("سفارش یافت نشد");
+  if (order.createdByUserId !== userId) {
+    throw new Error("Forbidden: You can only modify your own orders");
+  }
 }
 
 async function nextOrderNumber(tx: Prisma.TransactionClient) {
@@ -70,6 +83,7 @@ export async function createOrderAction(formData: FormData) {
         customerId,
         serviceId,
         assigneeId,
+        createdByUserId: user.id,
         description,
         internalNote,
         priority,
@@ -113,11 +127,12 @@ export async function createOrderAction(formData: FormData) {
 
   revalidatePath("/orders");
   revalidatePath("/");
-  redirect(`/orders/${order.id}`);
+  return { orderId: order.id, orderNumber: order.orderNumber };
 }
 
 export async function updateOrderAction(orderId: string, formData: FormData) {
   const user = await requireUser();
+  await checkOrderPermission(orderId, user.id, user.role);
 
   const assigneeId = String(formData.get("assigneeId") || "") || null;
   const description = String(formData.get("description") || "") || null;
@@ -180,6 +195,8 @@ export async function updateOrderAction(orderId: string, formData: FormData) {
 
 export async function changeOrderStatusAction(orderId: string, toStatus: OrderStatus) {
   const user = await requireUser();
+  await checkOrderPermission(orderId, user.id, user.role);
+
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("سفارش یافت نشد");
   if (!canTransition(order.status, toStatus)) {
@@ -249,7 +266,9 @@ export async function addPaymentAction(orderId: string, formData: FormData) {
 }
 
 export async function deleteOrderAction(orderId: string) {
-  await requireUser();
+  const user = await requireUser();
+  await checkOrderPermission(orderId, user.id, user.role);
+
   await prisma.order.delete({ where: { id: orderId } });
   revalidatePath("/orders");
   revalidatePath("/");

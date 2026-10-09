@@ -8,17 +8,18 @@ datasource db {
 }
 
 model User {
-  id           String          @id @default(cuid())
-  name         String
-  username     String          @unique
-  passwordHash String
-  role         String          @default("STAFF")
-  isActive     Boolean         @default(true)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  employee     Employee?
-  activities   OrderActivity[]
-  payments     OrderPayment[]
+  id                String          @id @default(cuid())
+  name              String
+  username          String          @unique
+  passwordHash      String
+  role              String          @default("STAFF")
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  employee          Employee?
+  createdOrders     Order[]         @relation("OrderCreatedByUser")
+  activities        OrderActivity[]
+  payments          OrderPayment[]
 }
 
 model Customer {
@@ -84,32 +85,35 @@ model Service {
 }
 
 model Order {
-  id            String               @id @default(cuid())
-  orderNumber   Int                  @unique
-  customerId    String
-  serviceId     String
-  assigneeId    String?
-  description   String?
-  internalNote  String?
-  status        String               @default("NEW")
-  priority      String               @default("NORMAL")
-  totalAmount   Int                  @default(0)
-  discount      Int                  @default(0)
-  expectedAt    DateTime?
-  deliveredAt   DateTime?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  assignee      Employee?            @relation(fields: [assigneeId], references: [id])
-  customer      Customer             @relation(fields: [customerId], references: [id])
-  service       Service              @relation(fields: [serviceId], references: [id])
-  activities    OrderActivity[]
-  files         OrderFile[]
-  payments      OrderPayment[]
-  statusHistory OrderStatusHistory[]
+  id              String               @id @default(cuid())
+  orderNumber     Int                  @unique
+  customerId      String
+  serviceId       String
+  assigneeId      String?
+  createdByUserId String?
+  description     String?
+  internalNote    String?
+  status          String               @default("NEW")
+  priority        String               @default("NORMAL")
+  totalAmount     Int                  @default(0)
+  discount        Int                  @default(0)
+  expectedAt      DateTime?
+  deliveredAt     DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  assignee        Employee?            @relation(fields: [assigneeId], references: [id])
+  createdByUser   User?                @relation("OrderCreatedByUser", fields: [createdByUserId], references: [id])
+  customer        Customer             @relation(fields: [customerId], references: [id])
+  service         Service              @relation(fields: [serviceId], references: [id])
+  activities      OrderActivity[]
+  files           OrderFile[]
+  payments        OrderPayment[]
+  statusHistory   OrderStatusHistory[]
 
   @@index([status])
   @@index([customerId])
   @@index([assigneeId])
+  @@index([createdByUserId])
   @@index([createdAt])
   @@index([expectedAt])
 }

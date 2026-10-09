@@ -4,7 +4,10 @@ import { calculateCommission } from "@/lib/commission";
 import { monthRange } from "@/lib/jalali";
 
 export async function getEmployeePerformance(employeeId: string, year: number, month: number) {
-  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    include: { user: true },
+  });
   if (!employee) return null;
 
   const orders = await prisma.order.findMany({

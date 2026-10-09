@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { updateOrderAction } from "@/app/actions/orders";
 import { FancySelect } from "@/components/ui/fancy-select";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -7,6 +8,8 @@ import { PersianDatePicker } from "@/components/ui/persian-date-picker";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
 import { fullName } from "@/lib/utils";
 
 type Employee = { id: string; firstName: string; lastName: string };
@@ -34,10 +37,30 @@ export function OrderEditForm({
   internalNote: string | null;
   employees: Employee[];
 }) {
-  const updateWithId = updateOrderAction.bind(null, orderId);
+  const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    startLoading();
+    startTransition(async () => {
+      try {
+        await updateOrderAction(orderId, new FormData(e.currentTarget));
+        showToast("success", "سفارش با موفقیت به‌روزرسانی شد.");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          showToast("error", err.message);
+        }
+        throw err;
+      } finally {
+        stopLoading();
+      }
+    });
+  }
 
   return (
-    <form action={updateWithId} className="grid gap-4 sm:grid-cols-6 lg:grid-cols-12">
+    <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-6 lg:grid-cols-12">
       <div className="sm:col-span-6 lg:col-span-12">
         <Label>خدمت</Label>
         <div className="flex h-11 items-center rounded-xl border border-border bg-bg-elevated/60 px-3.5 text-sm text-text-muted">
@@ -98,7 +121,9 @@ export function OrderEditForm({
         <Textarea id="internalNote" name="internalNote" defaultValue={internalNote ?? ""} />
       </div>
       <div className="sm:col-span-6 lg:col-span-12">
-        <Button type="submit">ذخیره تغییرات</Button>
+        <Button type="submit" disabled={pending}>
+          {pending ? "در حال ذخیره..." : "ذخیره تغییرات"}
+        </Button>
       </div>
     </form>
   );

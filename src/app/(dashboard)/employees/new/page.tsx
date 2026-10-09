@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 
+export const dynamic = "force-dynamic";
+
 export default function NewEmployeePage() {
   return (
     <div className="mx-auto max-w-2xl">
@@ -40,6 +42,14 @@ export default function NewEmployeePage() {
                 <option value="false">خیر</option>
                 <option value="true">بله</option>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="username">نام کاربری</Label>
+              <Input id="username" name="username" required />
+            </div>
+            <div>
+              <Label htmlFor="password">رمز عبور</Label>
+              <Input id="password" name="password" type="password" required />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="notes">توضیحات</Label>

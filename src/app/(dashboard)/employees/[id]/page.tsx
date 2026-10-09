@@ -157,6 +157,14 @@ export default async function EmployeeDetailPage({
                   <option value="true">بله</option>
                 </Select>
               </div>
+              <div>
+                <Label htmlFor="username">نام کاربری</Label>
+                <Input id="username" name="username" defaultValue={employee.user?.username ?? ""} />
+              </div>
+              <div>
+                <Label htmlFor="password">رمز عبور جدید</Label>
+                <Input id="password" name="password" type="password" placeholder="خالی بگذارید برای عدم تغییر" />
+              </div>
               <div className="sm:col-span-2">
                 <Label htmlFor="notes">توضیحات</Label>
                 <Textarea id="notes" name="notes" defaultValue={employee.notes ?? ""} />

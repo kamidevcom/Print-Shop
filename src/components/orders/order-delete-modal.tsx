@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { deleteOrderAction } from "@/app/actions/orders";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
 
 export function OrderDeleteModal({
   orderId,
@@ -16,17 +19,27 @@ export function OrderDeleteModal({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+  const router = useRouter();
 
   function handleDelete() {
     setError("");
+    startLoading();
     startTransition(async () => {
       try {
         await deleteOrderAction(orderId);
+        showToast("success", `سفارش #${orderNumber} با موفقیت حذف شد.`);
+        router.refresh();
+        setOpen(false);
       } catch (err: unknown) {
         if (err instanceof Error && err.message !== "NEXT_REDIRECT") {
           setError(err.message);
+          showToast("error", err.message);
         }
         throw err;
+      } finally {
+        stopLoading();
       }
     });
   }

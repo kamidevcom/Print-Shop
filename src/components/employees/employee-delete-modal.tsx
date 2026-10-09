@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { deleteEmployeeAction } from "@/app/actions/entities";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2 } from "lucide-react";
+import { useLoading } from "@/components/ui/loading-overlay";
+import { useToast } from "@/components/ui/toast";
 
 export function EmployeeDeleteModal({
   employeeId,
@@ -16,17 +19,27 @@ export function EmployeeDeleteModal({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
+  const { showToast } = useToast();
+  const router = useRouter();
 
   function handleDelete() {
     setError("");
+    startLoading();
     startTransition(async () => {
       try {
         await deleteEmployeeAction(employeeId);
+        showToast("success", `کارمند ${employeeName} با موفقیت حذف شد.`);
+        router.refresh();
+        setOpen(false);
       } catch (err: unknown) {
         if (err instanceof Error && err.message !== "NEXT_REDIRECT") {
           setError(err.message);
+          showToast("error", err.message);
         }
         throw err;
+      } finally {
+        stopLoading();
       }
     });
   }

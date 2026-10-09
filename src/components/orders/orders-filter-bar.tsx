@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { FancySelect } from "@/components/ui/fancy-select";
 import { Button } from "@/components/ui/button";
 import { ORDER_STATUS_LABELS, PRIORITY_LABELS } from "@/lib/order-state";
@@ -19,8 +20,27 @@ export function OrdersFilterBar({
   overdue?: string;
   employees: { id: string; firstName: string; lastName: string }[];
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const params = new URLSearchParams(searchParams);
+    params.set("page", "1");
+    for (const [key, value] of formData.entries()) {
+      const stringValue = String(value);
+      if (stringValue) {
+        params.set(key, stringValue);
+      } else {
+        params.delete(key);
+      }
+    }
+    router.push(`/orders?${params.toString()}`);
+  }
+
   return (
-    <form className="mb-6 grid gap-3 rounded-2xl border border-border bg-surface/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
+    <form onSubmit={handleSubmit} className="mb-6 grid gap-3 rounded-2xl border border-border bg-surface/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
       <FancySelect
         name="status"
         defaultValue={status || ""}

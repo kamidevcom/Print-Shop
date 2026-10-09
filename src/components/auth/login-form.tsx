@@ -24,7 +24,7 @@ export function LoginForm() {
       <input type="hidden" name="callbackUrl" value={callbackUrl} />
       <div>
         <Label htmlFor="username">نام کاربری</Label>
-        <Input id="username" name="username" defaultValue="admin" autoComplete="username" required />
+        <Input id="username" name="username" autoComplete="username" required />
       </div>
       <div>
         <Label htmlFor="password">رمز عبور</Label>
@@ -32,7 +32,6 @@ export function LoginForm() {
           id="password"
           name="password"
           type="password"
-          defaultValue="admin123"
           autoComplete="current-password"
           required
         />

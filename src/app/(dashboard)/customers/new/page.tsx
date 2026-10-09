@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
 
+export const dynamic = "force-dynamic";
+
 export default function NewCustomerPage() {
   return (
     <div className="mx-auto max-w-2xl">

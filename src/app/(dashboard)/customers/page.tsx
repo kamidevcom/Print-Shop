@@ -4,6 +4,7 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { CustomerTableRow } from "@/components/customers/customer-table-row";
+import { requireManager } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  await requireManager();
   const { q } = await searchParams;
   const customers = await listCustomersWithStats(q);
 

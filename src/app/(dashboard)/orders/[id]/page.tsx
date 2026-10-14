@@ -13,6 +13,9 @@ import { toJalaliDateTime } from "@/lib/jalali";
 import { PAYMENT_METHOD_LABELS, statusLabel } from "@/lib/order-state";
 import { paidFromPayments } from "@/lib/queries/customers";
 import { OrderDeleteModal } from "@/components/orders/order-delete-modal";
+import { auth } from "@/lib/auth";
+import { checkOrderAccess } from "@/lib/authz";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +24,13 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  const userId = session.user.id;
+  const userRole = session.user.role;
+
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },
@@ -39,6 +49,9 @@ export default async function OrderDetailPage({
   });
 
   if (!order) notFound();
+
+  const hasAccess = await checkOrderAccess(id, userId, userRole);
+  if (!hasAccess) notFound();
 
   const employees = await prisma.employee.findMany({
     where: { isActive: true },

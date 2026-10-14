@@ -8,10 +8,17 @@ import { toJalaliDateTime } from "@/lib/jalali";
 import { ACTIVE_STATUSES, IN_PROGRESS_STATUSES } from "@/lib/order-state";
 import { OrderStatus } from "@/lib/domain";
 import { startOfDay, endOfDay } from "date-fns";
+import { auth } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const now = new Date();
   const dayStart = startOfDay(now);
   const dayEnd = endOfDay(now);

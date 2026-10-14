@@ -8,41 +8,58 @@ import { ACTIVE_STATUSES } from "@/lib/order-state";
 import { formatMoney, fullName, remainingAmount, formatNumber } from "@/lib/utils";
 import { toJalaliDateTime } from "@/lib/jalali";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { auth } from "@/lib/auth";
+import { Role } from "@/lib/domain";
+import { getReportWhereClause } from "@/lib/authz";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  const userId = session.user.id;
+  const userRole = session.user.role;
+
   const now = new Date();
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
+  const orderWhere = getReportWhereClause(userId, userRole, {
+    createdAt: { gte: monthStart, lte: monthEnd },
+    status: { not: OrderStatus.CANCELLED },
+  });
+
+  const overdueWhere = getReportWhereClause(userId, userRole, {
+    status: { in: ACTIVE_STATUSES },
+    expectedAt: { lt: now },
+  });
+
   const [overdue, monthOrders, employees] = await Promise.all([
     prisma.order.findMany({
-      where: {
-        status: { in: ACTIVE_STATUSES },
-        expectedAt: { lt: now },
-      },
+      where: overdueWhere,
       include: { customer: true, service: true, assignee: true },
       orderBy: { expectedAt: "asc" },
     }),
     prisma.order.findMany({
-      where: {
-        createdAt: { gte: monthStart, lte: monthEnd },
-        status: { not: OrderStatus.CANCELLED },
-      },
+      where: orderWhere,
       include: { payments: true },
     }),
-    prisma.employee.findMany({
-      where: { isActive: true },
-      include: {
-        orders: {
-          where: {
-            status: OrderStatus.DELIVERED,
-            deliveredAt: { gte: monthStart, lte: monthEnd },
+    userRole === Role.ADMIN
+      ? prisma.employee.findMany({
+          where: { isActive: true },
+          include: {
+            orders: {
+              where: {
+                status: OrderStatus.DELIVERED,
+                deliveredAt: { gte: monthStart, lte: monthEnd },
+              },
+            },
           },
-        },
-      },
-    }),
+        })
+      : [],
   ]);
 
   const monthRevenue = monthOrders.reduce((sum, o) => sum + o.totalAmount - o.discount, 0);
@@ -94,29 +111,31 @@ export default async function ReportsPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>عملکرد کارمندان (تحویل ماه جاری)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {employees.map((emp) => {
-              const total = emp.orders.reduce((sum, o) => sum + o.totalAmount - o.discount, 0);
-              return (
-                <Link
-                  key={emp.id}
-                  href={`/employees/${emp.id}`}
-                  className="flex items-center justify-between rounded-xl border border-border p-3 hover:border-accent/30"
-                >
-                  <div>
-                    <p className="font-medium">{fullName(emp.firstName, emp.lastName)}</p>
-                    <p className="text-xs text-text-muted">{emp.orders.length} سفارش تحویل‌شده</p>
-                  </div>
-                  <p className="text-sm text-accent">{formatMoney(total)}</p>
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
+        {userRole === Role.ADMIN && (
+          <Card>
+            <CardHeader>
+              <CardTitle>عملکرد کارمندان (تحویل ماه جاری)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {employees.map((emp) => {
+                const total = emp.orders.reduce((sum, o) => sum + o.totalAmount - o.discount, 0);
+                return (
+                  <Link
+                    key={emp.id}
+                    href={`/employees/${emp.id}`}
+                    className="flex items-center justify-between rounded-xl border border-border p-3 hover:border-accent/30"
+                  >
+                    <div>
+                      <p className="font-medium">{fullName(emp.firstName, emp.lastName)}</p>
+                      <p className="text-xs text-text-muted">{emp.orders.length} سفارش تحویل‌شده</p>
+                    </div>
+                    <p className="text-sm text-accent">{formatMoney(total)}</p>
+                  </Link>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

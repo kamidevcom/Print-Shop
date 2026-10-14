@@ -17,6 +17,7 @@ import { toJalali, toJalaliDateTime } from "@/lib/jalali";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
 import { CustomerDeleteModal } from "@/components/customers/customer-delete-modal";
 import { Star } from "lucide-react";
+import { requireManager } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,7 @@ export default async function CustomerDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireManager();
   const { id } = await params;
   const customer = await prisma.customer.findUnique({ where: { id } });
   if (!customer) notFound();

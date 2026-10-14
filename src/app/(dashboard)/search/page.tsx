@@ -4,6 +4,9 @@ import { PageHeader } from "@/components/ui/page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { fullName } from "@/lib/utils";
 import { StatusBadge } from "@/components/orders/status-badge";
+import { auth } from "@/lib/auth";
+import { getOrderWhereClause } from "@/lib/authz";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +15,13 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  const userId = session.user.id;
+  const userRole = session.user.role;
+
   const { q = "" } = await searchParams;
   const query = q.trim();
 
@@ -24,6 +34,23 @@ export default async function SearchPage({
   }
 
   const orderNumber = Number(query.replace("#", ""));
+  const orderWhere = getOrderWhereClause(userId, userRole, {
+    OR: [
+      ...(Number.isFinite(orderNumber) ? [{ orderNumber }] : []),
+      { description: { contains: query } },
+      { service: { name: { contains: query } } },
+      {
+        customer: {
+          OR: [
+            { firstName: { contains: query } },
+            { lastName: { contains: query } },
+            { mobile: { contains: query } },
+          ],
+        },
+      },
+    ],
+  });
+
   const [customers, orders, services] = await Promise.all([
     prisma.customer.findMany({
       where: {
@@ -36,22 +63,7 @@ export default async function SearchPage({
       take: 20,
     }),
     prisma.order.findMany({
-      where: {
-        OR: [
-          ...(Number.isFinite(orderNumber) ? [{ orderNumber }] : []),
-          { description: { contains: query } },
-          { service: { name: { contains: query } } },
-          {
-            customer: {
-              OR: [
-                { firstName: { contains: query } },
-                { lastName: { contains: query } },
-                { mobile: { contains: query } },
-              ],
-            },
-          },
-        ],
-      },
+      where: orderWhere,
       include: { customer: true, service: true },
       take: 20,
       orderBy: { createdAt: "desc" },

@@ -5,9 +5,11 @@ import { PageHeader, EmptyState } from "@/components/ui/page";
 import { Card, CardContent } from "@/components/ui/card";
 import { OrdersFilterBar } from "@/components/orders/orders-filter-bar";
 import { OrderTableRow } from "@/components/orders/order-table-row";
+import { OrdersPagination } from "@/components/orders/orders-pagination";
 import { ACTIVE_STATUSES } from "@/lib/order-state";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { auth } from "@/lib/auth";
+import { getOrderWhereClause } from "@/lib/authz";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -24,12 +26,19 @@ export default async function OrdersPage({
     page?: string;
   }>;
 }) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  const userId = session.user.id;
+  const userRole = session.user.role;
+
   const sp = await searchParams;
   const now = new Date();
   const page = Math.max(1, parseInt(sp.page || "1", 10));
   const skip = (page - 1) * PAGE_SIZE;
 
-  const where = {
+  const baseWhere = {
     ...(sp.status ? { status: sp.status as OrderStatus } : {}),
     ...(sp.priority ? { priority: sp.priority as OrderPriority } : {}),
     ...(sp.assigneeId ? { assigneeId: sp.assigneeId } : {}),
@@ -37,6 +46,8 @@ export default async function OrdersPage({
       ? { status: { in: ACTIVE_STATUSES }, expectedAt: { lt: now } }
       : {}),
   };
+
+  const where = getOrderWhereClause(userId, userRole, baseWhere);
 
   const [orders, totalOrders, employees] = await Promise.all([
     prisma.order.findMany({
@@ -48,6 +59,7 @@ export default async function OrdersPage({
         customer: true,
         service: { include: { category: true } },
         assignee: true,
+        payments: true,
       },
     }),
     prisma.order.count({ where }),
@@ -58,12 +70,6 @@ export default async function OrdersPage({
   ]);
 
   const totalPages = Math.ceil(totalOrders / PAGE_SIZE);
-
-  const buildPageUrl = (p: number) => {
-    const params = new URLSearchParams(sp);
-    params.set("page", String(p));
-    return `/orders?${params.toString()}`;
-  };
 
   return (
     <div>
@@ -94,7 +100,7 @@ export default async function OrdersPage({
             <EmptyState title="سفارشی یافت نشد" className="m-5" />
           ) : (
             <>
-              <table className="w-full text-sm">
+<table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-text-dim">
                     <th className="px-4 py-3 text-right font-medium whitespace-nowrap">سفارش</th>
@@ -113,31 +119,11 @@ export default async function OrdersPage({
                   ))}
                 </tbody>
               </table>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                  <p className="text-sm text-text-muted">
-                    صفحه {page} از {totalPages} — مجموع {totalOrders} سفارش
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={page === 1}
-                      onClick={() => window.location.href = buildPageUrl(page - 1)}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={page === totalPages}
-                      onClick={() => window.location.href = buildPageUrl(page + 1)}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <OrdersPagination
+                page={page}
+                totalPages={totalPages}
+                searchParams={Object.fromEntries(new URLSearchParams(sp))}
+              />
             </>
           )}
         </CardContent>

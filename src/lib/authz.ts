@@ -57,3 +57,55 @@ export async function checkOrderAccess(orderId: string, userId: string, userRole
   });
   return order?.createdByUserId === userId;
 }
+
+export function canAccessAdminPanel(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canManageCustomers(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canManageEmployees(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canManageServices(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canViewAllOrders(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canViewAllReports(userRole: string): boolean {
+  return userRole === Role.ADMIN;
+}
+
+export function canCreateOrder(userRole: string): boolean {
+  return userRole === Role.ADMIN || userRole === Role.STAFF;
+}
+
+export function canViewDashboard(userRole: string): boolean {
+  return userRole === Role.ADMIN || userRole === Role.STAFF;
+}
+
+export function getOrderWhereClause(userId: string, userRole: string, baseWhere: Record<string, unknown> = {}) {
+  if (userRole === Role.ADMIN) {
+    return baseWhere;
+  }
+  return {
+    ...baseWhere,
+    createdByUserId: userId,
+  };
+}
+
+export function getReportWhereClause(userId: string, userRole: string, baseWhere: Record<string, unknown> = {}) {
+  if (userRole === Role.ADMIN) {
+    return baseWhere;
+  }
+  return {
+    ...baseWhere,
+    createdByUserId: userId,
+  };
+}

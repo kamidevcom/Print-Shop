@@ -7,10 +7,12 @@ import { fullName } from "@/lib/utils";
 import { toJalali } from "@/lib/jalali";
 import { EmployeeDeleteModal } from "@/components/employees/employee-delete-modal";
 import { Eye } from "lucide-react";
+import { requireManager } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
+  await requireManager();
   const employees = await prisma.employee.findMany({
     orderBy: { createdAt: "desc" },
     include: {

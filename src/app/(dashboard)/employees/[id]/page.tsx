@@ -13,6 +13,7 @@ import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/orders/status-badge";
 import { formatMoney, formatNumber, fullName } from "@/lib/utils";
 import { toJalali } from "@/lib/jalali";
+import { requireManager } from "@/lib/authz";
 
 const monthNames = [
   "فروردین",
@@ -36,6 +37,7 @@ export default async function EmployeeDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ year?: string; month?: string }>;
 }) {
+  await requireManager();
   const { id } = await params;
   const sp = await searchParams;
   const current = currentJalaliYearMonth();

@@ -14,21 +14,21 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/components/layout/logout-button";
-import { Role } from "@/lib/domain";
+import { canManageCustomers, canManageEmployees, canManageServices, canViewAllReports, canViewDashboard } from "@/lib/authz";
 interface NavLink {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles?: Role[];
+  permission?: (role: string) => boolean;
 }
 
 const links: NavLink[] = [
-  { href: "/", label: "داشبورد", icon: LayoutDashboard },
-  { href: "/orders", label: "سفارش‌ها", icon: ClipboardList },
-  { href: "/customers", label: "مشتریان", icon: Users },
-  { href: "/employees", label: "کارمندان", icon: UserCog, roles: [Role.ADMIN] },
-  { href: "/services", label: "خدمات", icon: Layers },
-  { href: "/reports", label: "گزارش‌ها", icon: BarChart3 },
+  { href: "/", label: "داشبورد", icon: LayoutDashboard, permission: canViewDashboard },
+  { href: "/orders", label: "سفارش‌ها", icon: ClipboardList, permission: () => true },
+  { href: "/customers", label: "مشتریان", icon: Users, permission: canManageCustomers },
+  { href: "/employees", label: "کارمندان", icon: UserCog, permission: canManageEmployees },
+  { href: "/services", label: "خدمات", icon: Layers, permission: canManageServices },
+  { href: "/reports", label: "گزارش‌ها", icon: BarChart3, permission: canViewAllReports },
 ];
 
 export function Sidebar({
@@ -44,7 +44,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
 
-  const filteredLinks = links.filter((link) => !link.roles || (userRole && link.roles.includes(userRole as Role)));
+  const filteredLinks = links.filter((link) => !link.permission || (userRole && link.permission(userRole)));
 
   return (
     <>

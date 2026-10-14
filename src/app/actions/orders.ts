@@ -70,12 +70,36 @@ export async function createOrderAction(formData: FormData) {
   const createdAt = createdAtRaw ? new Date(createdAtRaw) : new Date();
   const initialPaid = Number(formData.get("initialPaid") || 0);
   const paymentMethod = (String(formData.get("paymentMethod") || "CARD") as PaymentMethod) || "CARD";
+  const markAsFullyPaid = formData.get("markAsFullyPaid") === "true";
 
   if (!customerId || !serviceId) {
     throw new Error("مشتری و خدمت الزامی است");
   }
 
-  const order = await prisma.$transaction(async (tx) => {
+  if (totalAmount <= 0) {
+    throw new Error("مبلغ کل باید بیشتر از صفر باشد");
+  }
+
+  if (discount < 0) {
+    throw new Error("تخفیف نمی‌تواند منفی باشد");
+  }
+
+  if (discount > totalAmount) {
+    throw new Error("تخفیف نمی‌تواند بیشتر از مبلغ کل باشد");
+  }
+
+  if (initialPaid < 0) {
+    throw new Error("بیانه نمی‌تواند منفی باشد");
+  }
+
+  const payableAmount = totalAmount - discount;
+
+  if (initialPaid > payableAmount) {
+    throw new Error("بیانه نمی‌تواند بیشتر از مبلغ قابل پرداخت باشد");
+  }
+
+  const order = await prisma.$transaction(
+    async (tx) => {
     const orderNumber = await nextOrderNumber(tx);
     const created = await tx.order.create({
       data: {
@@ -110,7 +134,34 @@ export async function createOrderAction(formData: FormData) {
       );
     }
 
-    if (initialPaid > 0) {
+    if (markAsFullyPaid) {
+      const remainingAmount = payableAmount - initialPaid;
+      if (remainingAmount > 0) {
+        await tx.orderPayment.create({
+          data: {
+            orderId: created.id,
+            amount: remainingAmount,
+            method: paymentMethod,
+            createdBy: user.id,
+            notes: "تسویه کامل در هنگام ایجاد سفارش",
+          },
+        });
+        await logActivity(
+          tx,
+          created.id,
+          `تسویه کامل: ${remainingAmount.toLocaleString("fa-IR")} تومان`,
+          user.id,
+        );
+      }
+      if (initialPaid > 0) {
+        await logActivity(
+          tx,
+          created.id,
+          `بیانه ${initialPaid.toLocaleString("fa-IR")} تومان`,
+          user.id,
+        );
+      }
+    } else if (initialPaid > 0) {
       await tx.orderPayment.create({
         data: {
           orderId: created.id,
@@ -123,7 +174,9 @@ export async function createOrderAction(formData: FormData) {
     }
 
     return created;
-  });
+  },
+  { timeout: 15000 }
+);
 
   revalidatePath("/orders");
   revalidatePath("/");
@@ -149,44 +202,47 @@ export async function updateOrderAction(orderId: string, formData: FormData) {
   });
   if (!existing) throw new Error("سفارش یافت نشد");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: orderId },
-      data: {
-        assigneeId,
-        description,
-        internalNote,
-        priority,
-        totalAmount,
-        discount,
-        expectedAt,
-      },
-    });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          assigneeId,
+          description,
+          internalNote,
+          priority,
+          totalAmount,
+          discount,
+          expectedAt,
+        },
+      });
 
-    if (existing.assigneeId !== assigneeId) {
-      if (assigneeId) {
-        const emp = await tx.employee.findUnique({ where: { id: assigneeId } });
-        await logActivity(
-          tx,
-          orderId,
-          `به ${emp?.firstName ?? ""} ${emp?.lastName ?? ""} اختصاص داده شد`,
-          user.id,
-        );
-      } else {
-        await logActivity(tx, orderId, "تخصیص کارمند برداشته شد", user.id);
+      if (existing.assigneeId !== assigneeId) {
+        if (assigneeId) {
+          const emp = await tx.employee.findUnique({ where: { id: assigneeId } });
+          await logActivity(
+            tx,
+            orderId,
+            `به ${emp?.firstName ?? ""} ${emp?.lastName ?? ""} اختصاص داده شد`,
+            user.id,
+          );
+        } else {
+          await logActivity(tx, orderId, "تخصیص کارمند برداشته شد", user.id);
+        }
       }
-    }
 
-    if (
-      existing.totalAmount !== totalAmount ||
-      existing.discount !== discount ||
-      existing.priority !== priority ||
-      existing.description !== description ||
-      existing.internalNote !== internalNote
-    ) {
-      await logActivity(tx, orderId, "اطلاعات سفارش به‌روزرسانی شد", user.id);
-    }
-  });
+      if (
+        existing.totalAmount !== totalAmount ||
+        existing.discount !== discount ||
+        existing.priority !== priority ||
+        existing.description !== description ||
+        existing.internalNote !== internalNote
+      ) {
+        await logActivity(tx, orderId, "اطلاعات سفارش به‌روزرسانی شد", user.id);
+      }
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -203,29 +259,32 @@ export async function changeOrderStatusAction(orderId: string, toStatus: OrderSt
     throw new Error("تغییر وضعیت مجاز نیست");
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: orderId },
-      data: {
-        status: toStatus,
-        deliveredAt: toStatus === OrderStatus.DELIVERED ? new Date() : order.deliveredAt,
-      },
-    });
-    await tx.orderStatusHistory.create({
-      data: {
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: toStatus,
+          deliveredAt: toStatus === OrderStatus.DELIVERED ? new Date() : order.deliveredAt,
+        },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId,
+          fromStatus: order.status,
+          toStatus,
+        },
+      });
+      await logActivity(
+        tx,
         orderId,
-        fromStatus: order.status,
-        toStatus,
-      },
-    });
-    await logActivity(
-      tx,
-      orderId,
-      `وضعیت → ${ORDER_STATUS_LABELS[toStatus]}`,
-      user.id,
-      { from: order.status, to: toStatus },
-    );
-  });
+        `وضعیت → ${ORDER_STATUS_LABELS[toStatus]}`,
+        user.id,
+        { from: order.status, to: toStatus },
+      );
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/orders");
@@ -235,34 +294,92 @@ export async function changeOrderStatusAction(orderId: string, toStatus: OrderSt
 
 export async function addPaymentAction(orderId: string, formData: FormData) {
   const user = await requireUser();
+  await checkOrderPermission(orderId, user.id, user.role);
+
   const amount = Number(formData.get("amount") || 0);
   const method = (String(formData.get("method") || "CASH") as PaymentMethod) || "CASH";
   const notes = String(formData.get("notes") || "") || null;
 
   if (amount <= 0) throw new Error("مبلغ نامعتبر است");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.orderPayment.create({
-      data: {
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.orderPayment.create({
+        data: {
+          orderId,
+          amount,
+          method,
+          notes,
+          createdBy: user.id,
+        },
+      });
+      await logActivity(
+        tx,
         orderId,
-        amount,
-        method,
-        notes,
-        createdBy: user.id,
-      },
-    });
-    await logActivity(
-      tx,
-      orderId,
-      `پرداخت ${amount.toLocaleString("fa-IR")} تومان ثبت شد`,
-      user.id,
-      { amount, method },
-    );
-  });
+        `پرداخت ${amount.toLocaleString("fa-IR")} تومان ثبت شد`,
+        user.id,
+        { amount, method },
+      );
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/orders/${orderId}`);
   revalidatePath("/customers");
   revalidatePath("/");
+}
+
+export async function settleOrderAction(orderId: string, formData: FormData) {
+  const user = await requireUser();
+  const method = (String(formData.get("method") || "CARD") as PaymentMethod) || "CARD";
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { payments: true },
+  });
+
+  if (!order) throw new Error("سفارش یافت نشد");
+  if (order.status === OrderStatus.CANCELLED) throw new Error("سفارش لغو‌شده قابل تسویه نیست");
+
+  await checkOrderPermission(orderId, user.id, user.role);
+
+  const paid = order.payments.reduce((sum, p) => sum + p.amount, 0);
+  const payable = order.totalAmount - order.discount;
+  const remaining = Math.max(0, payable - paid);
+
+  if (remaining === 0) {
+    return { alreadyPaid: true, message: "این سفارش قبلاً به‌صورت کامل تسویه شده است." };
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.orderPayment.create({
+        data: {
+          orderId,
+          amount: remaining,
+          method,
+          createdBy: user.id,
+          notes: "تسویه کامل از لیست سفارش‌ها",
+        },
+      });
+      await logActivity(
+        tx,
+        orderId,
+        `تسویه کامل: ${remaining.toLocaleString("fa-IR")} تومان`,
+        user.id,
+        { amount: remaining, method },
+      );
+    },
+    { timeout: 15000 }
+  );
+
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
+  revalidatePath("/customers");
+  revalidatePath("/");
+  revalidatePath("/reports");
+
+  return { success: true, amount: remaining };
 }
 
 export async function deleteOrderAction(orderId: string) {
@@ -287,29 +404,33 @@ export async function addOrderFileMetaAction(
   },
 ) {
   const user = await requireUser();
+  await checkOrderPermission(orderId, user.id, user.role);
   const last = await prisma.orderFile.findFirst({
     where: { orderId },
     orderBy: { version: "desc" },
   });
   const version = (last?.version ?? 0) + 1;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.orderFile.create({
-      data: {
-        orderId,
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.orderFile.create({
+        data: {
+          orderId,
+          fileName: data.fileName,
+          storedName: data.storedName,
+          mimeType: data.mimeType,
+          size: data.size,
+          notes: data.notes,
+          version,
+        },
+      });
+      await logActivity(tx, orderId, `فایل جدید آپلود شد (نسخه ${version})`, user.id, {
         fileName: data.fileName,
-        storedName: data.storedName,
-        mimeType: data.mimeType,
-        size: data.size,
-        notes: data.notes,
         version,
-      },
-    });
-    await logActivity(tx, orderId, `فایل جدید آپلود شد (نسخه ${version})`, user.id, {
-      fileName: data.fileName,
-      version,
-    });
-  });
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/orders/${orderId}`);
 }

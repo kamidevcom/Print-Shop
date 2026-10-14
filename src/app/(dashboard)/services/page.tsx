@@ -13,10 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { formatMoney } from "@/lib/utils";
+import { requireManager } from "@/lib/authz";
 
 export const dynamic = "force-dynamic";
 
 export default async function ServicesPage() {
+  await requireManager();
   const categories = await prisma.serviceCategory.findMany({
     orderBy: { sortOrder: "asc" },
     include: {

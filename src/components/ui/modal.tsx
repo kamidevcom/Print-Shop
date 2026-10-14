@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ModalPortal } from "./modal-portal";
 
 type ModalProps = {
   open: boolean;
@@ -22,7 +23,7 @@ const sizeClasses = {
   full: "max-w-[90vw]",
 };
 
-export function Modal({
+function ModalContent({
   open,
   title,
   description,
@@ -82,4 +83,8 @@ export function Modal({
       </div>
     </div>
   );
+}
+
+export function Modal(props: ModalProps) {
+  return <ModalPortal><ModalContent {...props} /></ModalPortal>;
 }

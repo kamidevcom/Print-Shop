@@ -40,53 +40,64 @@ export function OrdersFilterBar({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 grid gap-3 rounded-2xl border border-border bg-surface/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
-      <FancySelect
-        name="status"
-        defaultValue={status || ""}
-        searchable={false}
-        options={[
-          { value: "", label: "همه وضعیت‌ها" },
-          ...Object.values(OrderStatus).map((s) => ({
-            value: s,
-            label: ORDER_STATUS_LABELS[s],
-          })),
-        ]}
-      />
-      <FancySelect
-        name="priority"
-        defaultValue={priority || ""}
-        searchable={false}
-        options={[
-          { value: "", label: "همه اولویت‌ها" },
-          ...Object.values(OrderPriority).map((p) => ({
-            value: p,
-            label: PRIORITY_LABELS[p],
-          })),
-        ]}
-      />
-      <FancySelect
-        name="assigneeId"
-        defaultValue={assigneeId || ""}
-        options={[
-          { value: "", label: "همه کارمندان" },
-          ...employees.map((e) => ({
-            value: e.id,
-            label: fullName(e.firstName, e.lastName),
-          })),
-        ]}
-      />
-      <FancySelect
-        name="overdue"
-        defaultValue={overdue || ""}
-        searchable={false}
-        options={[
-          { value: "", label: "همه موعدها" },
-          { value: "1", label: "فقط دیرکرد" },
-        ]}
-      />
-      <Button type="submit" variant="secondary" className="sm:col-span-2 lg:col-span-4 lg:w-fit">
-        اعمال فیلتر
+    <form
+      onSubmit={handleSubmit}
+      className="mb-6 flex flex-wrap items-end gap-2 rounded-2xl border border-border bg-surface/60 p-3"
+    >
+      <div className="flex-1 min-w-[140px]">
+        <FancySelect
+          name="status"
+          defaultValue={status || ""}
+          searchable={false}
+          options={[
+            { value: "", label: "وضعیت" },
+            ...Object.values(OrderStatus).map((s) => ({
+              value: s,
+              label: ORDER_STATUS_LABELS[s],
+            })),
+          ]}
+        />
+      </div>
+      <div className="flex-1 min-w-[120px]">
+        <FancySelect
+          name="priority"
+          defaultValue={priority || ""}
+          searchable={false}
+          options={[
+            { value: "", label: "اولویت" },
+            ...Object.values(OrderPriority).map((p) => ({
+              value: p,
+              label: PRIORITY_LABELS[p],
+            })),
+          ]}
+        />
+      </div>
+      <div className="flex-1 min-w-[140px]">
+        <FancySelect
+          name="assigneeId"
+          defaultValue={assigneeId || ""}
+          options={[
+            { value: "", label: "کارمند" },
+            ...employees.map((e) => ({
+              value: e.id,
+              label: fullName(e.firstName, e.lastName),
+            })),
+          ]}
+        />
+      </div>
+      <div className="flex-1 min-w-[120px]">
+        <FancySelect
+          name="overdue"
+          defaultValue={overdue || ""}
+          searchable={false}
+          options={[
+            { value: "", label: "موعد" },
+            { value: "1", label: "دیرکرد" },
+          ]}
+        />
+      </div>
+      <Button type="submit" variant="secondary" className="shrink-0 h-11 px-4">
+        اعمال
       </Button>
     </form>
   );

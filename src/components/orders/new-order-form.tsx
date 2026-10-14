@@ -34,6 +34,9 @@ function validateForm(formData: FormData): string | null {
   const customerId = formData.get("customerId");
   const serviceId = formData.get("serviceId");
   const totalAmount = formData.get("totalAmount");
+  const discount = Number(formData.get("discount") || 0);
+  const initialPaid = Number(formData.get("initialPaid") || 0);
+  const markAsFullyPaid = formData.get("markAsFullyPaid") === "true";
 
   if (!customerId || customerId === "") {
     return "مشتری را انتخاب کنید";
@@ -43,6 +46,14 @@ function validateForm(formData: FormData): string | null {
   }
   if (totalAmount === "" || Number(totalAmount) <= 0) {
     return "مبلغ کل باید بیشتر از صفر باشد";
+  }
+
+  const payableAmount = Number(totalAmount) - discount;
+  if (!markAsFullyPaid && initialPaid > payableAmount) {
+    return "بیعانه نمی‌تواند بیشتر از مبلغ قابل پرداخت باشد";
+  }
+  if (markAsFullyPaid && initialPaid > payableAmount) {
+    return "بیعانه نمی‌تواند بیشتر از مبلغ قابل پرداخت باشد";
   }
   return null;
 }
@@ -139,6 +150,7 @@ export function NewOrderForm({
     const validationError = validateForm(formData);
     if (validationError) {
       setError(validationError);
+      showToast("error", validationError);
       return;
     }
 
@@ -155,7 +167,6 @@ export function NewOrderForm({
           setError(err.message);
           showToast("error", err.message);
         }
-        throw err;
       } finally {
         stopLoading();
       }
@@ -263,6 +274,20 @@ export function NewOrderForm({
         <div className="sm:col-span-6 lg:col-span-4">
           <Label htmlFor="initialPaid">بیانه (پرداخت اولیه)</Label>
           <MoneyInput id="initialPaid" name="initialPaid" defaultValue={0} />
+        </div>
+
+        <div className="sm:col-span-6 lg:col-span-4">
+          <Label>تسویه کامل</Label>
+          <div className="flex h-11 items-center rounded-xl border border-border bg-bg-elevated px-3.5">
+            <label className="flex items-center gap-2 cursor-pointer w-full">
+              <input
+                type="checkbox"
+                name="markAsFullyPaid"
+                className="h-4 w-4 rounded border-border bg-bg-elevated text-accent focus:ring-accent/20 focus:ring-2"
+              />
+              <span className="text-sm text-text">مبلغ قابل پرداخت (مبلغ کل - تخفیف) به عنوان پرداخت ثبت می‌شود</span>
+            </label>
+          </div>
         </div>
 
         <div className="sm:col-span-6 lg:col-span-6">

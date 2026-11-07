@@ -1,22 +1,26 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp, Truck } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, XCircle, CircleHelp, Truck, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { OrderStatus, OrderPriority } from "@/lib/domain";
 import type { Order as PrismaOrder } from "@prisma/client";
 import { OrderDeleteModal } from "./order-delete-modal";
-import { changeOrderStatusAction } from "@/app/actions/orders";
+import { changeOrderStatusAction, settleOrderAction } from "@/app/actions/orders";
 import { getAllowedTransitions } from "@/lib/order-state";
 import { useLoading } from "@/components/ui/loading-overlay";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { FancySelect } from "@/components/ui/fancy-select";
+import { remainingAmount } from "@/lib/utils";
 
 type OrderWithRelations = PrismaOrder & {
   customer: { firstName: string; lastName: string; mobile: string };
   service: { name: string; category: { name: string } };
   assignee: { firstName: string; lastName: string } | null;
+  payments: { amount: number }[];
 };
 
 const statusConfig: Record<OrderStatus, { label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = {
@@ -35,6 +39,14 @@ const priorityConfig: Record<OrderPriority, { label: string; className: string }
   URGENT: { label: "فوری", className: "text-orange-600 bg-orange-100" },
   VERY_URGENT: { label: "خیلی فوری", className: "text-red-600 bg-red-100" },
 };
+
+const paymentMethodOptions = [
+  { value: "CARD", label: "کارت" },
+  { value: "CARD_TO_CARD", label: "کارت به کارت" },
+  { value: "CASH", label: "نقد" },
+  { value: "TRANSFER", label: "انتقال" },
+  { value: "OTHER", label: "سایر" },
+];
 
 function StatusBadge({ status }: { status: OrderStatus }) {
   const { label, icon: Icon, className } = statusConfig[status];
@@ -62,11 +74,21 @@ function formatCurrency(amount: number | null | undefined) {
   return new Intl.NumberFormat("fa-IR").format(amount) + " تومان";
 }
 
+function getPaidAmount(payments: { amount: number }[]): number {
+  return payments.reduce((sum, p) => sum + p.amount, 0);
+}
+
 export function OrderTableRow({ order }: { order: OrderWithRelations }) {
   const isOverdue = order.expectedAt && new Date(order.expectedAt) < new Date() && !["DELIVERED", "CANCELLED"].includes(order.status);
   const customerName = `${order.customer.firstName} ${order.customer.lastName}`;
   const assigneeName = order.assignee ? `${order.assignee.firstName} ${order.assignee.lastName}` : null;
+  const paid = getPaidAmount(order.payments);
+  const remaining = remainingAmount(order.totalAmount, order.discount, paid);
+  const canSettle = order.status !== OrderStatus.CANCELLED && remaining > 0;
+
   const [pendingStatus, startTransition] = useTransition();
+  const [settleOpen, setSettleOpen] = useState(false);
+  const [settleMethod, setSettleMethod] = useState<string>("CARD");
   const { startLoading, stopLoading } = useLoading();
   const { showToast } = useToast();
 
@@ -78,6 +100,31 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
       try {
         await changeOrderStatusAction(order.id, OrderStatus.DELIVERED);
         showToast("success", `سفارش #${order.orderNumber} به عنوان تحویل شده علامت‌گذاری شد.`);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          showToast("error", err.message);
+        }
+        throw err;
+      } finally {
+        stopLoading();
+      }
+    });
+  }
+
+  async function handleSettle() {
+    if (!canSettle) return;
+    startLoading();
+    startTransition(async () => {
+      try {
+        const formData = new FormData();
+        formData.set("method", settleMethod);
+        const result = await settleOrderAction(order.id, formData);
+        if (result.alreadyPaid) {
+          showToast("info", result.message);
+        } else {
+          showToast("success", `تسویه کامل با موفقیت انجام شد. مبلغ: ${formatCurrency(result.amount)}`);
+        }
+        setSettleOpen(false);
       } catch (err: unknown) {
         if (err instanceof Error) {
           showToast("error", err.message);
@@ -153,6 +200,50 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
               <Truck className="h-3.5 w-3.5 mr-1" />
               تحویل
             </Button>
+          )}
+          {canSettle && (
+            <>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                disabled={pendingStatus}
+                className="h-8 px-3"
+                onClick={() => setSettleOpen(true)}
+              >
+                <CreditCard className="h-3.5 w-3.5 mr-1" />
+                تسویه
+              </Button>
+              <Modal
+                open={settleOpen}
+                onClose={() => setSettleOpen(false)}
+                title="تسویه کامل سفارش"
+                description={`مبلغ قابل پرداخت: ${formatCurrency(remaining)}`}
+                size="sm"
+              >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-text-muted mb-2">روش پرداخت</label>
+                    <FancySelect
+                      name="settleMethod"
+                      options={paymentMethodOptions}
+                      defaultValue={settleMethod}
+                      onChange={setSettleMethod}
+                      searchable={false}
+                    />
+                  </div>
+                  <p className="text-xs text-text-dim">مبلغ <strong>{formatCurrency(remaining)}</strong> به عنوان پرداخت نهایی ثبت خواهد شد.</p>
+                  <div className="flex items-center justify-end gap-2 pt-2">
+                    <Button variant="ghost" onClick={() => setSettleOpen(false)}>
+                      انصراف
+                    </Button>
+                    <Button variant="primary" onClick={handleSettle} disabled={pendingStatus}>
+                      {pendingStatus ? "در حال ثبت..." : "تأیید و تسویه"}
+                    </Button>
+                  </div>
+                </div>
+              </Modal>
+            </>
           )}
           <OrderDeleteModal orderId={order.id} orderNumber={String(order.orderNumber)} />
         </div>

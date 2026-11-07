@@ -46,14 +46,17 @@ export async function createCustomerAction(formData: FormData) {
     throw new Error("نام، نام خانوادگی و موبایل الزامی است");
   }
 
-  const customer = await prisma.$transaction(async (tx) => {
-    if (isDefault) {
-      await unsetDefaultCustomer(tx);
-    }
-    return tx.customer.create({
-      data: { firstName, lastName, mobile, type, address, notes, isDefault },
-    });
-  });
+  const customer = await prisma.$transaction(
+    async (tx) => {
+      if (isDefault) {
+        await unsetDefaultCustomer(tx);
+      }
+      return tx.customer.create({
+        data: { firstName, lastName, mobile, type, address, notes, isDefault },
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath("/customers");
   revalidatePath("/orders/new");
@@ -79,14 +82,17 @@ export async function createCustomerQuickAction(formData: FormData) {
     return { error: "نام، نام خانوادگی و موبایل الزامی است" };
   }
 
-  const customer = await prisma.$transaction(async (tx) => {
-    if (isDefault) {
-      await unsetDefaultCustomer(tx);
-    }
-    return tx.customer.create({
-      data: { firstName, lastName, mobile, type, address, notes, isDefault },
-    });
-  });
+  const customer = await prisma.$transaction(
+    async (tx) => {
+      if (isDefault) {
+        await unsetDefaultCustomer(tx);
+      }
+      return tx.customer.create({
+        data: { firstName, lastName, mobile, type, address, notes, isDefault },
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath("/customers");
   revalidatePath("/orders/new");
@@ -114,15 +120,18 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   const isActive = String(formData.get("isActive") || "true") === "true";
   const isDefault = String(formData.get("isDefault") || "") === "true";
 
-  await prisma.$transaction(async (tx) => {
-    if (isDefault) {
-      await unsetDefaultCustomer(tx, id);
-    }
-    await tx.customer.update({
-      where: { id },
-      data: { firstName, lastName, mobile, type, address, notes, isActive, isDefault },
-    });
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      if (isDefault) {
+        await unsetDefaultCustomer(tx, id);
+      }
+      await tx.customer.update({
+        where: { id },
+        data: { firstName, lastName, mobile, type, address, notes, isActive, isDefault },
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/customers/${id}`);
   revalidatePath("/customers");
@@ -150,22 +159,25 @@ export async function createEmployeeAction(formData: FormData) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  const employee = await prisma.$transaction(async (tx) => {
-    if (isDefaultAssignee) {
-      await tx.employee.updateMany({ data: { isDefaultAssignee: false } });
-    }
-    const user = await tx.user.create({
-      data: {
-        name: `${firstName} ${lastName}`,
-        username,
-        passwordHash,
-        role: Role.STAFF,
-      },
-    });
-    return tx.employee.create({
-      data: { firstName, lastName, phone, title, notes, startedAt, isDefaultAssignee, userId: user.id },
-    });
-  });
+  const employee = await prisma.$transaction(
+    async (tx) => {
+      if (isDefaultAssignee) {
+        await tx.employee.updateMany({ data: { isDefaultAssignee: false } });
+      }
+      const user = await tx.user.create({
+        data: {
+          name: `${firstName} ${lastName}`,
+          username,
+          passwordHash,
+          role: Role.STAFF,
+        },
+      });
+      return tx.employee.create({
+        data: { firstName, lastName, phone, title, notes, startedAt, isDefaultAssignee, userId: user.id },
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath("/employees");
   redirect(`/employees/${employee.id}`);
@@ -188,57 +200,60 @@ export async function updateEmployeeAction(id: string, formData: FormData) {
 
   if (!firstName || !lastName) throw new Error("نام و نام خانوادگی الزامی است");
 
-  await prisma.$transaction(async (tx) => {
-    if (isDefaultAssignee) {
-      await tx.employee.updateMany({
-        where: { NOT: { id } },
-        data: { isDefaultAssignee: false },
-      });
-    }
-
-    const employee = await tx.employee.findUnique({ where: { id }, include: { user: true } });
-    if (!employee) throw new Error("کارمند یافت نشد");
-
-    const userData: { name: string; username?: string; passwordHash?: string; isActive?: boolean } = {
-      name: `${firstName} ${lastName}`,
-      isActive,
-    };
-
-    if (username) {
-      const existingUser = await tx.user.findUnique({ where: { username } });
-      if (existingUser && existingUser.id !== employee.userId) {
-        throw new Error("نام کاربری قبلاً استفاده شده است");
+  await prisma.$transaction(
+    async (tx) => {
+      if (isDefaultAssignee) {
+        await tx.employee.updateMany({
+          where: { NOT: { id } },
+          data: { isDefaultAssignee: false },
+        });
       }
-      userData.username = username;
-    }
 
-    if (password) {
-      if (password.length < 6) throw new Error("رمز عبور باید حداقل ۶ کاراکتر باشد");
-      userData.passwordHash = await bcrypt.hash(password, 12);
-    }
+      const employee = await tx.employee.findUnique({ where: { id }, include: { user: true } });
+      if (!employee) throw new Error("کارمند یافت نشد");
 
-    if (employee.userId) {
-      await tx.user.update({ where: { id: employee.userId }, data: userData });
-    } else if (username) {
-      if (!password) throw new Error("رمز عبور برای کارمند جدید الزامی است");
-      const user = await tx.user.create({ data: { ...userData, role: Role.STAFF, username, passwordHash: userData.passwordHash! } });
-      await tx.employee.update({ where: { id }, data: { userId: user.id } });
-    }
-
-    await tx.employee.update({
-      where: { id },
-      data: {
-        firstName,
-        lastName,
-        phone,
-        title,
-        notes,
+      const userData: { name: string; username?: string; passwordHash?: string; isActive?: boolean } = {
+        name: `${firstName} ${lastName}`,
         isActive,
-        isDefaultAssignee,
-        ...(startedAt ? { startedAt } : {}),
-      },
-    });
-  });
+      };
+
+      if (username) {
+        const existingUser = await tx.user.findUnique({ where: { username } });
+        if (existingUser && existingUser.id !== employee.userId) {
+          throw new Error("نام کاربری قبلاً استفاده شده است");
+        }
+        userData.username = username;
+      }
+
+      if (password) {
+        if (password.length < 6) throw new Error("رمز عبور باید حداقل ۶ کاراکتر باشد");
+        userData.passwordHash = await bcrypt.hash(password, 12);
+      }
+
+      if (employee.userId) {
+        await tx.user.update({ where: { id: employee.userId }, data: userData });
+      } else if (username) {
+        if (!password) throw new Error("رمز عبور برای کارمند جدید الزامی است");
+        const user = await tx.user.create({ data: { ...userData, role: Role.STAFF, username, passwordHash: userData.passwordHash! } });
+        await tx.employee.update({ where: { id }, data: { userId: user.id } });
+      }
+
+      await tx.employee.update({
+        where: { id },
+        data: {
+          firstName,
+          lastName,
+          phone,
+          title,
+          notes,
+          isActive,
+          isDefaultAssignee,
+          ...(startedAt ? { startedAt } : {}),
+        },
+      });
+    },
+    { timeout: 15000 }
+  );
 
   revalidatePath(`/employees/${id}`);
   revalidatePath("/employees");
@@ -278,10 +293,13 @@ export async function toggleCategoryAction(id: string, isActive: boolean) {
 export async function deleteCustomerAction(id: string) {
   await requireManager();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.customer.delete({ where: { id } });
-    // If we deleted the default customer, no action needed - there will be no default
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.customer.delete({ where: { id } });
+      // If we deleted the default customer, no action needed - there will be no default
+    },
+    { timeout: 15000 }
+  );
   revalidatePath("/customers");
   revalidatePath("/orders/new");
   redirect("/customers");
@@ -290,14 +308,17 @@ export async function deleteCustomerAction(id: string) {
 export async function deleteEmployeeAction(id: string) {
   await requireManager();
 
-  await prisma.$transaction(async (tx) => {
-    const employee = await tx.employee.findUnique({ where: { id }, include: { user: true } });
-    if (!employee) throw new Error("کارمند یافت نشد");
-    if (employee.userId) {
-      await tx.user.delete({ where: { id: employee.userId } });
-    }
-    await tx.employee.delete({ where: { id } });
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      const employee = await tx.employee.findUnique({ where: { id }, include: { user: true } });
+      if (!employee) throw new Error("کارمند یافت نشد");
+      if (employee.userId) {
+        await tx.user.delete({ where: { id: employee.userId } });
+      }
+      await tx.employee.delete({ where: { id } });
+    },
+    { timeout: 15000 }
+  );
   revalidatePath("/employees");
   redirect("/employees");
 }
@@ -305,13 +326,16 @@ export async function deleteEmployeeAction(id: string) {
 export async function setDefaultCustomerAction(customerId: string) {
   await requireManager();
 
-  await prisma.$transaction(async (tx) => {
-    await unsetDefaultCustomer(tx);
-    await tx.customer.update({
-      where: { id: customerId },
-      data: { isDefault: true },
-    });
-  });
+  await prisma.$transaction(
+    async (tx) => {
+      await unsetDefaultCustomer(tx);
+      await tx.customer.update({
+        where: { id: customerId },
+        data: { isDefault: true },
+      });
+    },
+    { timeout: 15000 }
+  );
   revalidatePath("/customers");
   revalidatePath("/orders/new");
 }

@@ -1,4 +1,4 @@
-# Kian Tash Print Shop Management System
+# سیستم مدیریت سفارش
 
 A comprehensive order management application for print shops, built with Next.js 15, Prisma, PostgreSQL, and NextAuth. The system handles employees, customers, orders, services, payments, file uploads, and reporting with full Persian/Jalali date support.
 

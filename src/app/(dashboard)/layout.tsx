@@ -50,7 +50,7 @@ export default function DashboardLayout({
                 <TopSearch />
               </div>
               <div className="flex items-center gap-3">
-                <div className="hidden text-sm text-text-dim lg:block">چاپ کیان تاش · عملیات روزانه</div>
+                <div className="hidden text-sm text-text-dim lg:block">سیستم مدیریت سفارش · عملیات روزانه</div>
                 <ThemeToggle />
               </div>
             </header>

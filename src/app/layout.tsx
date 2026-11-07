@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-toggle";
+import { SessionProvider } from "@/components/auth/session-provider";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -10,8 +11,8 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  title: "چاپ کیان تاش | سیستم مدیریت چاپخانه",
-  description: "پنل داخلی مدیریت سفارش‌ها، مشتریان و تولید چاپخانه کیان تاش",
+  title: "سیستم مدیریت سفارش",
+  description: "پنل داخلی مدیریت سفارش‌ها، مشتریان و عملیات",
 };
 
 export default function RootLayout({
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="fa" dir="rtl" className={`${vazirmatn.variable} h-full antialiased`} suppressHydrationWarning>
       <head />
       <body className="min-h-full font-sans">
-        <ThemeProvider>{children}</ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

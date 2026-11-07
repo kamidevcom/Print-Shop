@@ -69,8 +69,8 @@ export function Sidebar({
               <Printer className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold tracking-wide text-accent">چاپ کیان تاش</p>
-              <p className="text-xs text-text-dim">سیستم مدیریت چاپخانه</p>
+              <p className="truncate text-sm font-semibold tracking-wide text-accent">سیستم مدیریت سفارش</p>
+              <p className="text-xs text-text-dim">پنل داخلی</p>
             </div>
           </div>
           <button

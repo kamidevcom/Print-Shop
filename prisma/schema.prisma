@@ -8,18 +8,18 @@ datasource db {
 }
 
 model User {
-  id                String          @id @default(cuid())
-  name              String
-  username          String          @unique
-  passwordHash      String
-  role              String          @default("STAFF")
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  employee          Employee?
-  createdOrders     Order[]         @relation("OrderCreatedByUser")
-  activities        OrderActivity[]
-  payments          OrderPayment[]
+  id            String          @id @default(cuid())
+  name          String
+  username      String          @unique
+  passwordHash  String
+  role          String          @default("STAFF")
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  employee      Employee?
+  createdOrders Order[]         @relation("OrderCreatedByUser")
+  activities    OrderActivity[]
+  payments      OrderPayment[]
 }
 
 model Customer {
@@ -31,9 +31,9 @@ model Customer {
   address   String?
   notes     String?
   isActive  Boolean  @default(true)
-  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  isDefault Boolean  @default(false)
   orders    Order[]
 
   @@index([mobile])
@@ -90,7 +90,6 @@ model Order {
   customerId      String
   serviceId       String
   assigneeId      String?
-  createdByUserId String?
   description     String?
   internalNote    String?
   status          String               @default("NEW")
@@ -101,6 +100,7 @@ model Order {
   deliveredAt     DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
+  createdByUserId String?
   assignee        Employee?            @relation(fields: [assigneeId], references: [id])
   createdByUser   User?                @relation("OrderCreatedByUser", fields: [createdByUserId], references: [id])
   customer        Customer             @relation(fields: [customerId], references: [id])

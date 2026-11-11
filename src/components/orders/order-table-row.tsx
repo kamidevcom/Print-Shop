@@ -8,7 +8,6 @@ import { OrderStatus, OrderPriority } from "@/lib/domain";
 import type { Order as PrismaOrder } from "@prisma/client";
 import { OrderDeleteModal } from "./order-delete-modal";
 import { changeOrderStatusAction, settleOrderAction } from "@/app/actions/orders";
-import { getAllowedTransitions } from "@/lib/order-state";
 import { useLoading } from "@/components/ui/loading-overlay";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -92,7 +91,7 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
   const { startLoading, stopLoading } = useLoading();
   const { showToast } = useToast();
 
-  const canDeliver = getAllowedTransitions(order.status as OrderStatus).includes(OrderStatus.DELIVERED);
+  const canDeliver = order.status !== OrderStatus.DELIVERED && order.status !== OrderStatus.CANCELLED;
 
   async function handleDeliver() {
     startLoading();
@@ -198,7 +197,7 @@ export function OrderTableRow({ order }: { order: OrderWithRelations }) {
               onClick={handleDeliver}
             >
               <Truck className="h-3.5 w-3.5 mr-1" />
-              تحویل
+              تحویل شد
             </Button>
           )}
           {canSettle && (

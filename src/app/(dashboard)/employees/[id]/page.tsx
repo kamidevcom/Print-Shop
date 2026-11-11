@@ -200,6 +200,7 @@ export default async function EmployeeDetailPage({
                   {selectedDayIndex < orderDays.length - 1 ? (
                     <Link
                       href={dayHref(orderDays[selectedDayIndex + 1])}
+                      scroll={false}
                       className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-text-muted hover:bg-surface-hover hover:text-text"
                     >
                       <ChevronRight className="h-4 w-4" /> روز قبل
@@ -214,6 +215,7 @@ export default async function EmployeeDetailPage({
                   {selectedDayIndex > 0 ? (
                     <Link
                       href={dayHref(orderDays[selectedDayIndex - 1])}
+                      scroll={false}
                       className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-text-muted hover:bg-surface-hover hover:text-text"
                     >
                       روز بعد <ChevronLeft className="h-4 w-4" />

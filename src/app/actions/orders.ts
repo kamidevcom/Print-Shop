@@ -255,7 +255,11 @@ export async function changeOrderStatusAction(orderId: string, toStatus: OrderSt
 
   const order = await prisma.order.findUnique({ where: { id: orderId } });
   if (!order) throw new Error("سفارش یافت نشد");
-  if (!canTransition(order.status, toStatus)) {
+  const directDelivery =
+    toStatus === OrderStatus.DELIVERED &&
+    order.status !== OrderStatus.DELIVERED &&
+    order.status !== OrderStatus.CANCELLED;
+  if (!directDelivery && !canTransition(order.status, toStatus)) {
     throw new Error("تغییر وضعیت مجاز نیست");
   }
 

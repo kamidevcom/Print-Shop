@@ -60,7 +60,7 @@ export function Sidebar({
           "flex h-full min-h-screen w-[260px] shrink-0 flex-col border-r border-border bg-bg-elevated/95 shadow-[var(--shadow-soft)] backdrop-blur-md transition-transform duration-200 ease-in-out",
           "lg:sticky lg:top-0 lg:border-r-0 lg:border-l lg:h-screen",
           isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0",
-          "fixed lg:static inset-y-0 right-0 z-50",
+          "fixed inset-y-0 right-0 z-50 lg:sticky lg:bottom-auto",
         )}
       >
         <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4 lg:justify-start lg:py-6">

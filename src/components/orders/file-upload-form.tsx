@@ -6,15 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
+import { useLoading } from "@/components/ui/loading-overlay";
 
 export function FileUploadForm({ orderId }: { orderId: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const { showToast } = useToast();
+  const { startLoading, stopLoading } = useLoading();
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
+    startLoading();
     const form = e.currentTarget;
     const formData = new FormData(form);
     formData.set("orderId", orderId);
@@ -36,6 +39,7 @@ export function FileUploadForm({ orderId }: { orderId: string }) {
       showToast("error", "خطا در آپلود فایل.");
     } finally {
       setPending(false);
+      stopLoading();
     }
   }
 

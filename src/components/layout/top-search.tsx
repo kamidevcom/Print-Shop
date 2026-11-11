@@ -4,15 +4,20 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useLoading } from "@/components/ui/loading-overlay";
 
 export function TopSearch() {
   const router = useRouter();
   const [q, setQ] = useState("");
+  const { stopLoading } = useLoading();
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     const query = q.trim();
-    if (!query) return;
+    if (!query) {
+      stopLoading();
+      return;
+    }
     router.push(`/search?q=${encodeURIComponent(query)}`);
   }
 

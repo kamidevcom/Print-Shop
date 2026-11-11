@@ -73,7 +73,7 @@ A comprehensive order management application for print shops, built with Next.js
 - Linked to authentication users (username/password)
 - Role fixed as STAFF (managers are ADMIN users)
 - Performance metrics: total/delivered/in-progress/cancelled orders
-- Monthly commission tiers: 3% (≤100M), 5% (100M–200M), 7% (>200M)
+- Monthly employee commission: fixed 20% of delivered order totals
 - Default assignee designation
 
 ### Services

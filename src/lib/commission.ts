@@ -1,8 +1,6 @@
-/** Monthly employee commission tiers based on delivered order totals. */
-export function getCommissionRate(monthlyTotal: number): number {
-  if (monthlyTotal > 200_000_000) return 0.07;
-  if (monthlyTotal >= 100_000_000) return 0.05;
-  return 0.03;
+/** Employee commission is a fixed 20% of delivered order totals for the month. */
+export function getCommissionRate(): number {
+  return 0.2;
 }
 
 export function calculateCommission(monthlyTotal: number): {
@@ -11,7 +9,7 @@ export function calculateCommission(monthlyTotal: number): {
   percentLabel: string;
   commission: number;
 } {
-  const rate = getCommissionRate(monthlyTotal);
+  const rate = getCommissionRate();
   return {
     total: monthlyTotal,
     rate,

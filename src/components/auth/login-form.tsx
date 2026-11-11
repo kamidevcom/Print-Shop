@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLoading } from "@/components/ui/loading-overlay";
 import { loginAction } from "@/app/actions/login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,12 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const [state, formAction, pending] = useActionState<LoginState, FormData>(submitLogin, null);
+  const { startLoading, stopLoading } = useLoading();
+
+  useEffect(() => {
+    if (pending) startLoading();
+    else stopLoading();
+  }, [pending, startLoading, stopLoading]);
 
   return (
     <form action={formAction} className="space-y-4">

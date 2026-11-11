@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CircleHelp, Star, StarOff } from "lucide-react";
 import { CustomerDeleteModal } from "./customer-delete-modal";
 import { setDefaultCustomerAction, unsetDefaultCustomerAction } from "@/app/actions/entities";
+import { useLoading } from "@/components/ui/loading-overlay";
 
 type CustomerRowData = {
   id: string;
@@ -29,13 +30,19 @@ type CustomerRowData = {
 
 function DefaultCustomerToggle({ customerId, isDefault }: { customerId: string; isDefault: boolean }) {
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
 
   function handleToggle() {
+    startLoading();
     startTransition(async () => {
-      if (isDefault) {
-        await unsetDefaultCustomerAction(customerId);
-      } else {
-        await setDefaultCustomerAction(customerId);
+      try {
+        if (isDefault) {
+          await unsetDefaultCustomerAction(customerId);
+        } else {
+          await setDefaultCustomerAction(customerId);
+        }
+      } finally {
+        stopLoading();
       }
     });
   }

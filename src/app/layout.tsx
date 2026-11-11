@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import { ThemeProvider } from "@/components/theme/theme-toggle";
 import { SessionProvider } from "@/components/auth/session-provider";
+import { LoadingProvider } from "@/components/ui/loading-overlay";
 import "./globals.css";
 
 const vazirmatn = Vazirmatn({
@@ -25,7 +26,9 @@ export default function RootLayout({
       <head />
       <body className="min-h-full font-sans">
         <SessionProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <LoadingProvider>{children}</LoadingProvider>
+          </ThemeProvider>
         </SessionProvider>
       </body>
     </html>

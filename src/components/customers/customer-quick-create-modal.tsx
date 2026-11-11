@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { CUSTOMER_TYPE_LABELS, CustomerType } from "@/lib/domain";
+import { useLoading } from "@/components/ui/loading-overlay";
 
 export type QuickCustomer = {
   id: string;
@@ -29,6 +30,7 @@ export function CustomerQuickCreateModal({
 }) {
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const { startLoading, stopLoading } = useLoading();
 
   return (
     <Modal
@@ -44,15 +46,20 @@ export function CustomerQuickCreateModal({
           e.preventDefault();
           setError("");
           const formData = new FormData(e.currentTarget);
+          startLoading();
           startTransition(async () => {
-            const result = await createCustomerQuickAction(formData);
-            if ("error" in result && result.error) {
-              setError(result.error);
-              return;
-            }
-            if ("customer" in result && result.customer) {
-              onCreated(result.customer);
-              onClose();
+            try {
+              const result = await createCustomerQuickAction(formData);
+              if ("error" in result && result.error) {
+                setError(result.error);
+                return;
+              }
+              if ("customer" in result && result.customer) {
+                onCreated(result.customer);
+                onClose();
+              }
+            } finally {
+              stopLoading();
             }
           });
         }}

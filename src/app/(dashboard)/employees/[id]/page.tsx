@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getEmployeePerformance } from "@/lib/queries/employees";
@@ -35,7 +36,7 @@ export default async function EmployeeDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ year?: string; month?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; day?: string }>;
 }) {
   await requireManager();
   const { id } = await params;
@@ -49,6 +50,14 @@ export default async function EmployeeDetailPage({
 
   const { employee, stats, commission, orders, monthDeliveredCount } = data;
   const updateWithId = updateEmployeeAction.bind(null, id);
+  const orderDays = [...new Set(orders.map((order) => toJalali(order.createdAt)))];
+  const selectedDay = orderDays.includes(sp.day || "") ? sp.day! : orderDays[0];
+  const selectedDayIndex = selectedDay ? orderDays.indexOf(selectedDay) : -1;
+  const dailyOrders = selectedDay
+    ? orders.filter((order) => toJalali(order.createdAt) === selectedDay)
+    : [];
+  const dayHref = (day: string) =>
+    `/employees/${id}?${new URLSearchParams({ year: String(year), month: String(month), day }).toString()}`;
 
   return (
     <div className="space-y-8">
@@ -104,13 +113,13 @@ export default async function EmployeeDetailPage({
             />
           </div>
           <p className="text-xs text-text-dim">
-            زیر ۱۰۰ میلیون: ۳٪ · ۱۰۰ تا ۲۰۰ میلیون: ۵٪ · بالای ۲۰۰ میلیون: ۷٪ — فقط سفارش‌های تحویل‌شده همان ماه
+            نرخ ثابت ۲۰٪ از مبلغ سفارش‌های تحویل‌شده در همان ماه
           </p>
         </CardContent>
       </Card>
 
       <div className="grid gap-6 xl:grid-cols-2">
-<Card>
+        <Card>
           <CardHeader>
             <CardTitle>ویرایش مشخصات</CardTitle>
           </CardHeader>
@@ -186,28 +195,56 @@ export default async function EmployeeDetailPage({
             {orders.length === 0 ? (
               <p className="py-8 text-center text-sm text-text-muted">سفارشی اختصاص داده نشده.</p>
             ) : (
-              orders.slice(0, 20).map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/orders/${order.id}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated/50 p-3 hover:border-accent/30"
-                >
-                  <div>
-                    <p className="font-medium">
-                      #{order.orderNumber} · {order.service.name}
-                    </p>
-                    <p className="text-xs text-text-muted">
-                      {fullName(order.customer.firstName, order.customer.lastName)}
-                    </p>
+              <>
+                <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated/50 p-3">
+                  {selectedDayIndex < orderDays.length - 1 ? (
+                    <Link
+                      href={dayHref(orderDays[selectedDayIndex + 1])}
+                      className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-text-muted hover:bg-surface-hover hover:text-text"
+                    >
+                      <ChevronRight className="h-4 w-4" /> روز قبل
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="text-center">
+                    <p className="font-medium">{selectedDay}</p>
+                    <p className="text-xs text-text-muted">روز {selectedDayIndex + 1} از {orderDays.length} · {formatNumber(dailyOrders.length)} سفارش</p>
                   </div>
-                  <div className="text-left">
-                    <p className="text-sm">{formatMoney(order.totalAmount - order.discount)}</p>
-                    <div className="mt-1 flex justify-end">
-                      <StatusBadge status={order.status} />
+                  {selectedDayIndex > 0 ? (
+                    <Link
+                      href={dayHref(orderDays[selectedDayIndex - 1])}
+                      className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-sm text-text-muted hover:bg-surface-hover hover:text-text"
+                    >
+                      روز بعد <ChevronLeft className="h-4 w-4" />
+                    </Link>
+                  ) : (
+                    <span />
+                  )}
+                </div>
+                {dailyOrders.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/orders/${order.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-elevated/50 p-3 hover:border-accent/30"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        #{order.orderNumber} · {order.service.name}
+                      </p>
+                      <p className="text-xs text-text-muted">
+                        {fullName(order.customer.firstName, order.customer.lastName)}
+                      </p>
                     </div>
-                  </div>
-                </Link>
-              ))
+                    <div className="text-left">
+                      <p className="text-sm">{formatMoney(order.totalAmount - order.discount)}</p>
+                      <div className="mt-1 flex justify-end">
+                        <StatusBadge status={order.status} />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </>
             )}
           </CardContent>
         </Card>

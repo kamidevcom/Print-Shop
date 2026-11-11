@@ -471,15 +471,13 @@ Before adopting it, define the business rules for zero-value orders, overpayment
 
 Primary file identified: `src/lib/commission.ts`.
 
-The analyzed implementation uses a tiered commission rate based on the employee's monthly eligible order total.
+The implementation uses a fixed commission rate based on the employee's monthly eligible order total.
 
 | Monthly eligible total               | Commission rate |
 | ------------------------------------ | --------------: |
-| Below 100,000,000                    |              3% |
-| From 100,000,000 through 200,000,000 |              5% |
-| Above 200,000,000                    |              7% |
+| All monthly delivered order totals   |             20% |
 
-The commission is calculated using the applicable rate and rounded down to an integer.
+The commission is calculated at 20% and rounded down to an integer.
 
 Conceptually:
 
